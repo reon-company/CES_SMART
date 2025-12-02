@@ -30,9 +30,9 @@ export default function ModuleList() {
     }
   };
 
-  const handleAddModule = async (name, moduleId) => {
+  const handleAddModule = async (name, moduleId, wifiSsid, wifiPassword) => {
     try {
-      const response = await modulesAPI.create(name, moduleId);
+      const response = await modulesAPI.create(name, moduleId, wifiSsid, wifiPassword);
       if (response.success) {
         setShowAddModal(false);
         fetchModules();

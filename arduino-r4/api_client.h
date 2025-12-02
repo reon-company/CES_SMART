@@ -1,24 +1,46 @@
 #ifndef API_CLIENT_H
 #define API_CLIENT_H
 
-#include <WiFiNINA.h>
+#include <WiFiS3.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 #include "config.h"
 
 class APIClient {
 private:
-  WiFiClient client;
+  HTTPClient http;
   String baseUrl;
+  String host;
+  int port;
 
 public:
   APIClient() {
     baseUrl = String(API_BASE_URL);
+    // Parse URL to extract host and port
+    // For http://3.36.109.155:3000
+    if (baseUrl.startsWith("http://")) {
+      baseUrl = baseUrl.substring(7); // Remove "http://"
+    }
+    int colonIndex = baseUrl.indexOf(':');
+    if (colonIndex > 0) {
+      host = baseUrl.substring(0, colonIndex);
+      port = baseUrl.substring(colonIndex + 1).toInt();
+    } else {
+      host = baseUrl;
+      port = 80;
+    }
   }
 
-  bool connectWiFi() {
-    Serial.print("Connecting to WiFi: ");
-    Serial.println(WIFI_SSID);
+  bool connectWiFi(String ssid = "", String password = "") {
+    // WiFiConfig에서 SSID와 Password를 받아서 사용
+    // 빈 문자열이면 하드코딩된 값 사용 (하위 호환성)
+    String wifiSSID = (ssid.length() > 0) ? ssid : String(WIFI_SSID);
+    String wifiPASS = (password.length() > 0) ? password : String(WIFI_PASSWORD);
     
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print("Connecting to WiFi: ");
+    Serial.println(wifiSSID);
+    
+    WiFi.begin(wifiSSID.c_str(), wifiPASS.c_str());
     
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 20) {
@@ -45,51 +67,38 @@ public:
       return false;
     }
 
-    if (!client.connect(baseUrl.c_str(), 80)) {
-      Serial.println("Connection to server failed!");
-      return false;
-    }
-
     // Create JSON payload
-    String jsonPayload = "{";
-    jsonPayload += "\"module_id\":\"" + String(MODULE_ID) + "\",";
-    jsonPayload += "\"water_level\":" + String(waterLevel) + ",";
-    jsonPayload += "\"temperature\":" + String(temperature) + ",";
-    jsonPayload += "\"do_level\":" + String(doLevel) + ",";
-    jsonPayload += "\"ph_level\":" + String(phLevel) + ",";
-    jsonPayload += "\"light_level\":" + String(lightLevel);
-    jsonPayload += "}";
+    StaticJsonDocument<200> doc;
+    doc["module_id"] = String(MODULE_ID);
+    doc["water_level"] = waterLevel;
+    doc["temperature"] = temperature;
+    doc["do_level"] = doLevel;
+    doc["ph_level"] = phLevel;
+    doc["light_level"] = lightLevel;
+
+    String jsonPayload;
+    serializeJson(doc, jsonPayload);
 
     // Send HTTP POST request
-    client.print("POST ");
-    client.print(API_SENSORS_ENDPOINT);
-    client.println(" HTTP/1.1");
-    client.print("Host: ");
-    client.println(baseUrl);
-    client.println("Content-Type: application/json");
-    client.print("Content-Length: ");
-    client.println(jsonPayload.length());
-    client.println();
-    client.println(jsonPayload);
-
-    // Wait for response
-    unsigned long timeout = millis();
-    while (client.available() == 0) {
-      if (millis() - timeout > 5000) {
-        Serial.println("Client timeout!");
-        client.stop();
-        return false;
-      }
+    String url = "http://" + host + ":" + String(port) + String(API_SENSORS_ENDPOINT);
+    http.begin(url);
+    http.addHeader("Content-Type", "application/json");
+    
+    int httpResponseCode = http.POST(jsonPayload);
+    
+    if (httpResponseCode > 0) {
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+      String response = http.getString();
+      Serial.println(response);
+      http.end();
+      return true;
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+      http.end();
+      return false;
     }
-
-    // Read response
-    while (client.available()) {
-      String line = client.readStringUntil('\r');
-      Serial.print(line);
-    }
-
-    client.stop();
-    return true;
   }
 
   bool getActuatorStatus(bool& waterPump, bool& airPump, bool& valve, bool& heater, bool& cooler) {
@@ -99,56 +108,91 @@ public:
     }
 
     String endpoint = String(API_ACTUATORS_STATUS_ENDPOINT) + "/" + String(MODULE_ID);
+    String url = "http://" + host + ":" + String(port) + endpoint;
     
-    if (!client.connect(baseUrl.c_str(), 80)) {
-      Serial.println("Connection to server failed!");
+    http.begin(url);
+    int httpResponseCode = http.GET();
+    
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.print("Actuator status response: ");
+      Serial.println(response);
+      
+      // Parse JSON response
+      StaticJsonDocument<200> doc;
+      DeserializationError error = deserializeJson(doc, response);
+      
+      if (error) {
+        Serial.print("JSON parsing failed: ");
+        Serial.println(error.c_str());
+        http.end();
+        return false;
+      }
+      
+      waterPump = doc["water_pump"] | false;
+      airPump = doc["air_pump"] | false;
+      valve = doc["valve"] | false;
+      heater = doc["heater"] | false;
+      cooler = doc["cooler"] | false;
+      
+      http.end();
+      return true;
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+      http.end();
+      return false;
+    }
+  }
+
+  // 서버에서 WiFi 설정 가져오기 (WiFi 연결 전에 사용 - 임시 WiFi 필요)
+  bool getWiFiConfig(String& ssid, String& password) {
+    // WiFi가 연결되어 있지 않으면 실패
+    // 첫 부팅 시에는 임시 WiFi(핫스팟 등)로 연결되어 있어야 함
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi not connected! Cannot fetch config from server.");
+      Serial.println("Please connect to a temporary WiFi first (e.g., mobile hotspot).");
       return false;
     }
 
-    // Send HTTP GET request
-    client.print("GET ");
-    client.print(endpoint);
-    client.println(" HTTP/1.1");
-    client.print("Host: ");
-    client.println(baseUrl);
-    client.println("Connection: close");
-    client.println();
-
-    // Wait for response
-    unsigned long timeout = millis();
-    while (client.available() == 0) {
-      if (millis() - timeout > 5000) {
-        Serial.println("Client timeout!");
-        client.stop();
+    String endpoint = "/api/modules/" + String(MODULE_ID) + "/wifi-config";
+    String url = "http://" + host + ":" + String(port) + endpoint;
+    
+    http.begin(url);
+    int httpResponseCode = http.GET();
+    
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.print("WiFi config response: ");
+      Serial.println(response);
+      
+      // Parse JSON response
+      StaticJsonDocument<200> doc;
+      DeserializationError error = deserializeJson(doc, response);
+      
+      if (error) {
+        Serial.print("JSON parsing failed: ");
+        Serial.println(error.c_str());
+        http.end();
         return false;
       }
+      
+      if (doc["success"] && doc["wifi_ssid"] && doc["wifi_password"]) {
+        ssid = doc["wifi_ssid"].as<String>();
+        password = doc["wifi_password"].as<String>();
+        http.end();
+        return true;
+      } else {
+        Serial.println("WiFi config not found in server");
+        http.end();
+        return false;
+      }
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+      http.end();
+      return false;
     }
-
-    // Parse response (simplified - in production, use proper JSON parsing)
-    String response = "";
-    while (client.available()) {
-      response += client.readStringUntil('\r');
-    }
-
-    // Simple JSON parsing (for production, use ArduinoJson library)
-    // This is a simplified version - adjust based on actual response format
-    if (response.indexOf("\"water_pump\":true") > 0) waterPump = true;
-    else waterPump = false;
-    
-    if (response.indexOf("\"air_pump\":true") > 0) airPump = true;
-    else airPump = false;
-    
-    if (response.indexOf("\"valve\":true") > 0) valve = true;
-    else valve = false;
-    
-    if (response.indexOf("\"heater\":true") > 0) heater = true;
-    else heater = false;
-    
-    if (response.indexOf("\"cooler\":true") > 0) cooler = true;
-    else cooler = false;
-
-    client.stop();
-    return true;
   }
 };
 

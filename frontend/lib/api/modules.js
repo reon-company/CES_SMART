@@ -11,10 +11,12 @@ export const modulesAPI = {
     return response.data;
   },
 
-  create: async (name, moduleId) => {
+  create: async (name, moduleId, wifiSsid, wifiPassword) => {
     const response = await api.post('/api/modules', {
       name,
       module_id: moduleId,
+      wifi_ssid: wifiSsid,
+      wifi_password: wifiPassword,
     });
     return response.data;
   },

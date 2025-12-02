@@ -59,7 +59,7 @@ router.get('/:moduleId', auth, async (req, res) => {
 // @access  Private
 router.post('/', auth, moduleValidation, validate, async (req, res) => {
   try {
-    const { name, module_id } = req.body;
+    const { name, module_id, wifi_ssid, wifi_password } = req.body;
 
     // Check module count limit (최대 30개)
     const moduleCount = await Module.countByUserId(req.user.id);
@@ -80,7 +80,7 @@ router.post('/', auth, moduleValidation, validate, async (req, res) => {
     }
 
     // Create module
-    const moduleId = await Module.create(req.user.id, name, module_id);
+    const moduleId = await Module.create(req.user.id, name, module_id, wifi_ssid, wifi_password);
 
     // Initialize actuator status
     await ActuatorStatus.createOrUpdate(module_id, {
@@ -112,7 +112,7 @@ router.post('/', auth, moduleValidation, validate, async (req, res) => {
 // @access  Private
 router.put('/:moduleId', auth, async (req, res) => {
   try {
-    const { name, status } = req.body;
+    const { name, status, wifi_ssid, wifi_password } = req.body;
 
     // Check if module exists and belongs to user
     const module = await Module.findById(req.params.moduleId, req.user.id);
@@ -126,7 +126,9 @@ router.put('/:moduleId', auth, async (req, res) => {
     // Update module
     const updated = await Module.update(req.params.moduleId, req.user.id, {
       name,
-      status
+      status,
+      wifi_ssid,
+      wifi_password
     });
 
     if (!updated) {
@@ -182,6 +184,42 @@ router.delete('/:moduleId', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Delete module error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   GET /api/modules/:moduleId/wifi-config
+// @desc    Get WiFi configuration for module (for Arduino)
+// @access  Public (Arduino needs to access this)
+router.get('/:moduleId/wifi-config', async (req, res) => {
+  try {
+    const module = await Module.findByModuleId(req.params.moduleId);
+    
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found'
+      });
+    }
+
+    if (!module.wifi_ssid || !module.wifi_password) {
+      return res.status(404).json({
+        success: false,
+        message: 'WiFi configuration not set'
+      });
+    }
+
+    // WiFi 정보 반환 (비밀번호는 평문으로 전송 - HTTPS 권장)
+    res.json({
+      success: true,
+      wifi_ssid: module.wifi_ssid,
+      wifi_password: module.wifi_password
+    });
+  } catch (error) {
+    console.error('Get WiFi config error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

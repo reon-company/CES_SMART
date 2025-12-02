@@ -33,10 +33,10 @@ class Module {
     return rows[0].count;
   }
 
-  static async create(userId, name, moduleId) {
+  static async create(userId, name, moduleId, wifiSsid = null, wifiPassword = null) {
     const [result] = await pool.execute(
-      'INSERT INTO modules (user_id, name, module_id) VALUES (?, ?, ?)',
-      [userId, name, moduleId]
+      'INSERT INTO modules (user_id, name, module_id, wifi_ssid, wifi_password) VALUES (?, ?, ?, ?, ?)',
+      [userId, name, moduleId, wifiSsid, wifiPassword]
     );
     return result.insertId;
   }
@@ -52,6 +52,14 @@ class Module {
     if (data.status) {
       fields.push('status = ?');
       values.push(data.status);
+    }
+    if (data.wifi_ssid !== undefined) {
+      fields.push('wifi_ssid = ?');
+      values.push(data.wifi_ssid);
+    }
+    if (data.wifi_password !== undefined) {
+      fields.push('wifi_password = ?');
+      values.push(data.wifi_password);
     }
     
     if (fields.length === 0) return null;

@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS modules (
   user_id INT NOT NULL,
   name VARCHAR(255) NOT NULL,
   module_id VARCHAR(50) UNIQUE NOT NULL,
+  wifi_ssid VARCHAR(255) DEFAULT NULL COMMENT 'WiFi SSID',
+  wifi_password VARCHAR(255) DEFAULT NULL COMMENT 'WiFi Password (암호화 권장)',
   status ENUM('active', 'inactive', 'error') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

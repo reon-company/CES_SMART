@@ -64,7 +64,9 @@ void setup() {
   // 1. EEPROM에 저장된 WiFi 정보로 먼저 시도
   if (wifiConfig.isConfigured()) {
     Serial.println("EEPROM에서 WiFi 설정 로드");
-    if (wifiConfig.connect()) {
+    String eepromSSID = wifiConfig.getSSID();
+    String eepromPassword = wifiConfig.getPassword();
+    if (wifiConfig.connect(eepromSSID, eepromPassword)) {
       Serial.println("EEPROM WiFi로 연결 성공!");
     } else {
       Serial.println("EEPROM WiFi 연결 실패. 서버에서 설정을 가져오는 중...");
@@ -130,8 +132,16 @@ void loop() {
   // Check WiFi connection
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi disconnected. Attempting to reconnect...");
-    if (!wifiConfig.connect()) {
-      delay(5000);
+    if (wifiConfig.isConfigured()) {
+      String eepromSSID = wifiConfig.getSSID();
+      String eepromPassword = wifiConfig.getPassword();
+      if (!wifiConfig.connect(eepromSSID, eepromPassword)) {
+        delay(5000);
+        return;
+      }
+    } else {
+      Serial.println("WiFi 설정이 없습니다. 재시작하세요.");
+      delay(10000);
       return;
     }
   }

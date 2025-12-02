@@ -4,8 +4,6 @@ export default function AddModuleModal({ onClose, onAdd }) {
   const [formData, setFormData] = useState({
     name: '',
     module_id: '',
-    wifi_ssid: '',
-    wifi_password: '',
   });
   const [error, setError] = useState('');
 
@@ -19,11 +17,11 @@ export default function AddModuleModal({ onClose, onAdd }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.module_id.trim() || !formData.wifi_ssid.trim() || !formData.wifi_password.trim()) {
+    if (!formData.name.trim() || !formData.module_id.trim()) {
       setError('모든 필드를 입력해주세요.');
       return;
     }
-    onAdd(formData.name, formData.module_id, formData.wifi_ssid, formData.wifi_password);
+    onAdd(formData.name, formData.module_id);
   };
 
   return (
@@ -53,7 +51,7 @@ export default function AddModuleModal({ onClose, onAdd }) {
             />
           </div>
 
-          <div className="mb-4">
+          <div className="mb-6">
             <label htmlFor="module_id" className="block text-gray-700 text-sm font-bold mb-2">
               모듈 ID (아두이노에서 설정한 MODULE_ID)
             </label>
@@ -67,39 +65,9 @@ export default function AddModuleModal({ onClose, onAdd }) {
               placeholder="예: MODULE_001"
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="wifi_ssid" className="block text-gray-700 text-sm font-bold mb-2">
-              WiFi 이름 (SSID)
-            </label>
-            <input
-              type="text"
-              id="wifi_ssid"
-              name="wifi_ssid"
-              value={formData.wifi_ssid}
-              onChange={handleChange}
-              required
-              placeholder="예: SK_WiFiGIGA91A3_2.4G"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
-
-          <div className="mb-6">
-            <label htmlFor="wifi_password" className="block text-gray-700 text-sm font-bold mb-2">
-              WiFi 비밀번호
-            </label>
-            <input
-              type="password"
-              id="wifi_password"
-              name="wifi_password"
-              value={formData.wifi_password}
-              onChange={handleChange}
-              required
-              placeholder="WiFi 비밀번호를 입력하세요"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-            <p className="text-xs text-gray-500 mt-1">아두이노가 이 WiFi에 자동으로 연결됩니다</p>
+            <p className="text-xs text-gray-500 mt-1">
+              아두이노의 config.h 파일에 설정된 MODULE_ID와 일치해야 합니다
+            </p>
           </div>
 
           <div className="flex justify-end space-x-4">

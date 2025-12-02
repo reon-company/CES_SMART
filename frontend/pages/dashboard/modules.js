@@ -6,14 +6,22 @@ import { isAuthenticated } from '../../lib/auth';
 
 export default function ModulesPage() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login');
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      const auth = isAuthenticated();
+      setAuthenticated(auth);
+      if (!auth) {
+        router.push('/login');
+        return;
+      }
     }
   }, [router]);
 
-  if (!isAuthenticated()) {
+  if (!mounted || !authenticated) {
     return null;
   }
 

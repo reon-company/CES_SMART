@@ -70,14 +70,18 @@ public:
       return false;
     }
 
+    // Get WiFi signal strength (RSSI)
+    int rssi = WiFi.RSSI();
+
     // Create JSON payload
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<250> doc;
     doc["module_id"] = String(MODULE_ID);
     doc["water_level"] = waterLevel;
     doc["temperature"] = temperature;
     doc["do_level"] = doLevel;
     doc["ph_level"] = phLevel;
     doc["light_level"] = lightLevel;
+    doc["wifi_rssi"] = rssi;  // WiFi 신호 강도 추가
 
     String jsonPayload;
     serializeJson(doc, jsonPayload);
@@ -171,6 +175,18 @@ public:
     Serial.print("Actuator status response: ");
     Serial.println(response);
 
+    // 응답이 비어있으면 기본값 사용
+    if (response.length() == 0) {
+      Serial.println("Empty response, using default values");
+      waterPump = false;
+      airPump = false;
+      valve = false;
+      heater = false;
+      cooler = false;
+      client.stop();
+      return true; // 기본값으로 성공 처리
+    }
+
     // Parse JSON response
     StaticJsonDocument<200> doc;
     DeserializationError error = deserializeJson(doc, response);
@@ -178,15 +194,33 @@ public:
     if (error) {
       Serial.print("JSON parsing failed: ");
       Serial.println(error.c_str());
+      Serial.println("Using default actuator values");
+      // 파싱 실패 시 기본값 사용
+      waterPump = false;
+      airPump = false;
+      valve = false;
+      heater = false;
+      cooler = false;
       client.stop();
-      return false;
+      return true; // 기본값으로 성공 처리
     }
     
-    waterPump = doc["water_pump"] | false;
-    airPump = doc["air_pump"] | false;
-    valve = doc["valve"] | false;
-    heater = doc["heater"] | false;
-    cooler = doc["cooler"] | false;
+    // JSON에서 값 추출 (status 객체 안에 있을 수도 있음)
+    if (doc.containsKey("status")) {
+      JsonObject status = doc["status"];
+      waterPump = status["water_pump"] | false;
+      airPump = status["air_pump"] | false;
+      valve = status["valve"] | false;
+      heater = status["heater"] | false;
+      cooler = status["cooler"] | false;
+    } else {
+      // 직접 루트 레벨에 있을 경우
+      waterPump = doc["water_pump"] | false;
+      airPump = doc["air_pump"] | false;
+      valve = doc["valve"] | false;
+      heater = doc["heater"] | false;
+      cooler = doc["cooler"] | false;
+    }
 
     client.stop();
     return true;

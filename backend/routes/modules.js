@@ -27,12 +27,64 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/modules/:moduleId/wifi-config
+// @desc    Get WiFi configuration for module (for Arduino)
+// @access  Public (Arduino needs to access this)
+// NOTE: This route must be defined BEFORE /:moduleId to avoid route conflicts
+router.get('/:moduleId/wifi-config', async (req, res) => {
+  try {
+    const module = await Module.findByModuleId(req.params.moduleId);
+    
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found'
+      });
+    }
+
+    if (!module.wifi_ssid || !module.wifi_password) {
+      return res.status(404).json({
+        success: false,
+        message: 'WiFi configuration not set'
+      });
+    }
+
+    // WiFi 정보 반환 (비밀번호는 평문으로 전송 - HTTPS 권장)
+    res.json({
+      success: true,
+      wifi_ssid: module.wifi_ssid,
+      wifi_password: module.wifi_password
+    });
+  } catch (error) {
+    console.error('Get WiFi config error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // @route   GET /api/modules/:moduleId
-// @desc    Get single module by ID
+// @desc    Get single module by module_id (string) or id (number)
 // @access  Private
 router.get('/:moduleId', auth, async (req, res) => {
   try {
-    const module = await Module.findById(req.params.moduleId, req.user.id);
+    // Check if moduleId is a number (database id) or string (module_id)
+    const isNumeric = /^\d+$/.test(req.params.moduleId);
+    let module;
+    
+    if (isNumeric) {
+      // If numeric, use findById
+      module = await Module.findById(req.params.moduleId, req.user.id);
+    } else {
+      // If string, use findByModuleId and verify user ownership
+      const foundModule = await Module.findByModuleId(req.params.moduleId);
+      if (foundModule && foundModule.user_id === req.user.id) {
+        module = foundModule;
+      } else {
+        module = null;
+      }
+    }
     
     if (!module) {
       return res.status(404).json({
@@ -59,7 +111,9 @@ router.get('/:moduleId', auth, async (req, res) => {
 // @access  Private
 router.post('/', auth, moduleValidation, validate, async (req, res) => {
   try {
-    const { name, module_id, wifi_ssid, wifi_password } = req.body;
+    const { name, module_id } = req.body;
+    // WiFi 정보는 선택 사항 (나중에 모듈 상세 페이지에서 설정 가능)
+    const { wifi_ssid, wifi_password } = req.body;
 
     // Check module count limit (최대 30개)
     const moduleCount = await Module.countByUserId(req.user.id);
@@ -79,8 +133,8 @@ router.post('/', auth, moduleValidation, validate, async (req, res) => {
       });
     }
 
-    // Create module
-    const moduleId = await Module.create(req.user.id, name, module_id, wifi_ssid, wifi_password);
+    // Create module (WiFi 정보는 선택 사항)
+    const moduleId = await Module.create(req.user.id, name, module_id, wifi_ssid || null, wifi_password || null);
 
     // Initialize actuator status
     await ActuatorStatus.createOrUpdate(module_id, {
@@ -108,14 +162,32 @@ router.post('/', auth, moduleValidation, validate, async (req, res) => {
 });
 
 // @route   PUT /api/modules/:moduleId
-// @desc    Update module
+// @desc    Update module by module_id (string) or id (number)
 // @access  Private
 router.put('/:moduleId', auth, async (req, res) => {
   try {
     const { name, status, wifi_ssid, wifi_password } = req.body;
 
-    // Check if module exists and belongs to user
-    const module = await Module.findById(req.params.moduleId, req.user.id);
+    // Check if moduleId is a number (database id) or string (module_id)
+    const isNumeric = /^\d+$/.test(req.params.moduleId);
+    let module;
+    let dbId;
+    
+    if (isNumeric) {
+      // If numeric, use findById
+      dbId = req.params.moduleId;
+      module = await Module.findById(dbId, req.user.id);
+    } else {
+      // If string, use findByModuleId and verify user ownership
+      const foundModule = await Module.findByModuleId(req.params.moduleId);
+      if (foundModule && foundModule.user_id === req.user.id) {
+        module = foundModule;
+        dbId = foundModule.id;
+      } else {
+        module = null;
+      }
+    }
+
     if (!module) {
       return res.status(404).json({
         success: false,
@@ -124,7 +196,7 @@ router.put('/:moduleId', auth, async (req, res) => {
     }
 
     // Update module
-    const updated = await Module.update(req.params.moduleId, req.user.id, {
+    const updated = await Module.update(dbId, req.user.id, {
       name,
       status,
       wifi_ssid,
@@ -138,7 +210,7 @@ router.put('/:moduleId', auth, async (req, res) => {
       });
     }
 
-    const updatedModule = await Module.findById(req.params.moduleId, req.user.id);
+    const updatedModule = await Module.findById(dbId, req.user.id);
 
     res.json({
       success: true,
@@ -155,12 +227,30 @@ router.put('/:moduleId', auth, async (req, res) => {
 });
 
 // @route   DELETE /api/modules/:moduleId
-// @desc    Delete module
+// @desc    Delete module by module_id (string) or id (number)
 // @access  Private
 router.delete('/:moduleId', auth, async (req, res) => {
   try {
-    // Check if module exists and belongs to user
-    const module = await Module.findById(req.params.moduleId, req.user.id);
+    // Check if moduleId is a number (database id) or string (module_id)
+    const isNumeric = /^\d+$/.test(req.params.moduleId);
+    let module;
+    let dbId;
+    
+    if (isNumeric) {
+      // If numeric, use findById
+      dbId = req.params.moduleId;
+      module = await Module.findById(dbId, req.user.id);
+    } else {
+      // If string, use findByModuleId and verify user ownership
+      const foundModule = await Module.findByModuleId(req.params.moduleId);
+      if (foundModule && foundModule.user_id === req.user.id) {
+        module = foundModule;
+        dbId = foundModule.id;
+      } else {
+        module = null;
+      }
+    }
+
     if (!module) {
       return res.status(404).json({
         success: false,
@@ -169,7 +259,7 @@ router.delete('/:moduleId', auth, async (req, res) => {
     }
 
     // Delete module (cascade will handle related data)
-    const deleted = await Module.delete(req.params.moduleId, req.user.id);
+    const deleted = await Module.delete(dbId, req.user.id);
 
     if (!deleted) {
       return res.status(400).json({
@@ -184,42 +274,6 @@ router.delete('/:moduleId', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Delete module error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
-});
-
-// @route   GET /api/modules/:moduleId/wifi-config
-// @desc    Get WiFi configuration for module (for Arduino)
-// @access  Public (Arduino needs to access this)
-router.get('/:moduleId/wifi-config', async (req, res) => {
-  try {
-    const module = await Module.findByModuleId(req.params.moduleId);
-    
-    if (!module) {
-      return res.status(404).json({
-        success: false,
-        message: 'Module not found'
-      });
-    }
-
-    if (!module.wifi_ssid || !module.wifi_password) {
-      return res.status(404).json({
-        success: false,
-        message: 'WiFi configuration not set'
-      });
-    }
-
-    // WiFi 정보 반환 (비밀번호는 평문으로 전송 - HTTPS 권장)
-    res.json({
-      success: true,
-      wifi_ssid: module.wifi_ssid,
-      wifi_password: module.wifi_password
-    });
-  } catch (error) {
-    console.error('Get WiFi config error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

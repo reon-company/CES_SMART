@@ -8,6 +8,8 @@ import { sensorsAPI } from '../../lib/api/sensors';
 
 export default function Dashboard() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [moduleStats, setModuleStats] = useState({
@@ -19,7 +21,11 @@ export default function Dashboard() {
   const [recentSensorData, setRecentSensorData] = useState({});
 
   useEffect(() => {
-    if (!isAuthenticated()) {
+    setMounted(true);
+    const auth = isAuthenticated();
+    setAuthenticated(auth);
+    
+    if (!auth) {
       router.push('/login');
       return;
     }
@@ -72,7 +78,18 @@ export default function Dashboard() {
     }
   };
 
-  if (!isAuthenticated()) {
+  // 클라이언트 마운트 전에는 로딩 화면 표시 (hydration 에러 방지)
+  if (!mounted) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-lg">로딩 중...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!authenticated) {
     return null;
   }
 
@@ -224,7 +241,7 @@ export default function Dashboard() {
                           <p className="text-xs text-gray-500 mb-1">온도</p>
                           <p className="text-lg font-semibold text-gray-900">
                             {sensorData.temperature !== null && sensorData.temperature !== undefined
-                              ? `${sensorData.temperature.toFixed(1)}°C`
+                              ? `${Number(sensorData.temperature).toFixed(1)}°C`
                               : 'N/A'}
                           </p>
                         </div>
@@ -233,7 +250,7 @@ export default function Dashboard() {
                           <p className="text-lg font-semibold text-gray-900">
                             {sensorData.water_level !== null &&
                             sensorData.water_level !== undefined
-                              ? `${sensorData.water_level.toFixed(1)}%`
+                              ? `${Number(sensorData.water_level).toFixed(1)}%`
                               : 'N/A'}
                           </p>
                         </div>
@@ -241,7 +258,7 @@ export default function Dashboard() {
                           <p className="text-xs text-gray-500 mb-1">pH</p>
                           <p className="text-lg font-semibold text-gray-900">
                             {sensorData.ph_level !== null && sensorData.ph_level !== undefined
-                              ? sensorData.ph_level.toFixed(2)
+                              ? Number(sensorData.ph_level).toFixed(2)
                               : 'N/A'}
                           </p>
                         </div>
@@ -249,7 +266,15 @@ export default function Dashboard() {
                           <p className="text-xs text-gray-500 mb-1">DO</p>
                           <p className="text-lg font-semibold text-gray-900">
                             {sensorData.do_level !== null && sensorData.do_level !== undefined
-                              ? `${sensorData.do_level.toFixed(2)} mg/L`
+                              ? `${Number(sensorData.do_level).toFixed(2)} mg/L`
+                              : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">WiFi 신호</p>
+                          <p className="text-lg font-semibold text-gray-900">
+                            {sensorData.wifi_rssi !== null && sensorData.wifi_rssi !== undefined
+                              ? `${sensorData.wifi_rssi} dBm`
                               : 'N/A'}
                           </p>
                         </div>

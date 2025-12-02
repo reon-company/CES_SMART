@@ -14,18 +14,29 @@ export default function SensorCard({ title, value, unit, icon, threshold, status
       '용존산소 (DO)': '💨',
       'pH': '🧪',
       '조도': '💡',
+      'WiFi 신호 강도': '📶',
     };
     return iconMap[title] || '📊';
   };
 
   const formatValue = (val) => {
     if (val === null || val === undefined) return 'N/A';
-    if (typeof val === 'number') {
+    
+    // 숫자로 변환 시도
+    const numVal = Number(val);
+    if (!isNaN(numVal)) {
+      // 숫자로 변환 성공
       if (unit === '%' || unit === '°C' || unit === 'mg/L') {
-        return `${val.toFixed(1)}${unit || ''}`;
+        return `${numVal.toFixed(1)}${unit || ''}`;
       }
-      return `${val.toFixed(2)}${unit || ''}`;
+      if (unit === 'dBm') {
+        // WiFi RSSI는 소수점 없이 표시
+        return `${Math.round(numVal)}${unit || ''}`;
+      }
+      return `${numVal.toFixed(2)}${unit || ''}`;
     }
+    
+    // 숫자로 변환 실패 시 원본 값 반환
     return `${val} ${unit || ''}`;
   };
 

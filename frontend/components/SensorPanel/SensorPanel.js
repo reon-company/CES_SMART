@@ -7,6 +7,10 @@ export default function SensorPanel({ moduleId }) {
   const getSensorStatus = (sensorType, value) => {
     if (value === null || value === undefined) return null;
     
+    // 숫자로 변환
+    const numValue = Number(value);
+    if (isNaN(numValue)) return null;
+    
     // 기본 임계값 (실제로는 API에서 가져와야 함)
     const thresholds = {
       water_level: { min: 20, max: 80 },
@@ -19,16 +23,38 @@ export default function SensorPanel({ moduleId }) {
     const threshold = thresholds[sensorType];
     if (!threshold) return null;
 
-    if (value < threshold.min || value > threshold.max) {
+    if (numValue < threshold.min || numValue > threshold.max) {
       return 'danger';
     }
     if (
-      value < threshold.min * 1.1 ||
-      value > threshold.max * 0.9
+      numValue < threshold.min * 1.1 ||
+      numValue > threshold.max * 0.9
     ) {
       return 'warning';
     }
     return 'good';
+  };
+
+  const getWiFiStatus = (rssi) => {
+    if (rssi === null || rssi === undefined) return null;
+    
+    const numRssi = Number(rssi);
+    if (isNaN(numRssi)) return null;
+    
+    // WiFi 신호 강도 기준 (dBm)
+    // -30 ~ -50: 매우 좋음 (good)
+    // -50 ~ -70: 좋음 (good)
+    // -70 ~ -80: 보통 (warning)
+    // -80 이하: 나쁨 (danger)
+    if (numRssi >= -50) {
+      return 'good';
+    } else if (numRssi >= -70) {
+      return 'good';
+    } else if (numRssi >= -80) {
+      return 'warning';
+    } else {
+      return 'danger';
+    }
   };
 
   if (loading) {
@@ -98,6 +124,13 @@ export default function SensorPanel({ moduleId }) {
           unit="%"
           status={getSensorStatus('light_level', data.light_level)}
           threshold={{ min: 30, max: 70 }}
+        />
+        <SensorCard
+          title="WiFi 신호 강도"
+          value={data.wifi_rssi}
+          unit="dBm"
+          icon="📶"
+          status={getWiFiStatus(data.wifi_rssi)}
         />
         <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
           <div className="flex items-center space-x-3 mb-3">

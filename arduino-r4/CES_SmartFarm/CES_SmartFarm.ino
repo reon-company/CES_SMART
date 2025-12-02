@@ -285,6 +285,13 @@ void loop() {
     Serial.print("Light Level: ");
     Serial.print(lightLevel);
     Serial.println("%");
+    
+    // WiFi 신호 강도 출력
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.print("WiFi RSSI: ");
+      Serial.print(WiFi.RSSI());
+      Serial.println(" dBm");
+    }
 
     // Send data to server
     Serial.println("Sending sensor data to server...");

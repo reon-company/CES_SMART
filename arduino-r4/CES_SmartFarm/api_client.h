@@ -30,17 +30,20 @@ public:
     }
   }
 
-  bool connectWiFi(String ssid, String password) {
+  bool connectWiFi(String ssid = "", String password = "") {
     // WiFiConfig나 서버에서 받은 SSID와 Password 사용
     if (ssid.length() == 0 || password.length() == 0) {
       Serial.println("WiFi SSID or password is empty!");
       return false;
     }
     
-    Serial.print("Connecting to WiFi: ");
-    Serial.println(ssid);
+    String wifiSSID = ssid;
+    String wifiPASS = password;
     
-    WiFi.begin(ssid.c_str(), password.c_str());
+    Serial.print("Connecting to WiFi: ");
+    Serial.println(wifiSSID);
+    
+    WiFi.begin(wifiSSID.c_str(), wifiPASS.c_str());
     
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 20) {

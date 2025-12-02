@@ -41,15 +41,12 @@ private:
 
 public:
   WiFiConfig() {
-    // 주의: 이 생성자는 전역 객체로 생성될 때 호출됨
-    // 이 시점에는 Serial이 아직 초기화되지 않았을 수 있음
     // Arduino R4 WiFi EEPROM은 begin() 없이 바로 사용 가능
     loadFromEEPROM();
   }
   
   // EEPROM에서 설정 로드
   void loadFromEEPROM() {
-    // 주의: 이 함수는 생성자에서 호출될 수 있으므로 Serial 사용 주의
     configured = EEPROM.read(EEPROM_CONFIGURED_ADDR) == 1;
     if (configured) {
       ssid = readStringFromEEPROM(EEPROM_SSID_ADDR, 64);
@@ -217,44 +214,63 @@ public:
   // WiFi 연결 시도 (EEPROM에서 로드한 정보 사용)
   bool connect() {
     if (!configured || ssid.length() == 0) {
-      Serial.println("WiFi 설정이 없습니다. 설정 포털을 시작합니다.");
-      startConfigPortal();
+      Serial.println("WiFi 설정이 없습니다.");
       return false;
     }
     
     return connect(ssid, password);
   }
   
-  // WiFi 연결 시도 (SSID와 Password 직접 지정)
-  bool connect(String wifiSSID, String wifiPassword) {
+  // WiFi 연결 시도 (SSID와 Password 직접 지정, 재시도 로직 개선)
+  bool connect(String wifiSSID, String wifiPassword, int maxAttempts = 3) {
     if (wifiSSID.length() == 0 || wifiPassword.length() == 0) {
       Serial.println("WiFi SSID or password is empty!");
       return false;
     }
     
-    Serial.print("WiFi에 연결 중: ");
-    Serial.println(wifiSSID);
-    
-    WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
-    
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      Serial.print("WiFi에 연결 시도 중 (");
+      Serial.print(attempt);
+      Serial.print("/");
+      Serial.print(maxAttempts);
+      Serial.print("): ");
+      Serial.println(wifiSSID);
+      
+      // 이전 연결 정리
+      WiFi.disconnect();
       delay(500);
-      Serial.print(".");
-      attempts++;
+      
+      WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
+      
+      int waitAttempts = 0;
+      while (WiFi.status() != WL_CONNECTED && waitAttempts < 30) {
+        delay(500);
+        Serial.print(".");
+        waitAttempts++;
+      }
+      
+      if (WiFi.status() == WL_CONNECTED) {
+        Serial.println();
+        Serial.print("✅ WiFi 연결 성공! IP 주소: ");
+        Serial.println(WiFi.localIP());
+        Serial.print("신호 강도 (RSSI): ");
+        Serial.print(WiFi.RSSI());
+        Serial.println(" dBm");
+        return true;
+      } else {
+        Serial.println();
+        Serial.print("❌ 연결 실패");
+        if (attempt < maxAttempts) {
+          Serial.print(" - ");
+          Serial.print((attempt + 1) * 2);
+          Serial.println("초 후 재시도...");
+          delay((attempt + 1) * 2000); // 지수 백오프
+        }
+      }
     }
     
-    if (WiFi.status() == WL_CONNECTED) {
-      Serial.println();
-      Serial.print("WiFi 연결 성공! IP 주소: ");
-      Serial.println(WiFi.localIP());
-      return true;
-    } else {
-      Serial.println();
-      Serial.println("WiFi 연결 실패. 설정 포털을 시작합니다.");
-      startConfigPortal();
-      return false;
-    }
+    Serial.println("모든 연결 시도 실패.");
+    return false;
   }
 };
 

@@ -147,115 +147,49 @@ void setup() {
   Serial.flush();
   delay(100);
 
-  // WiFi 연결 시도 (우선순위: EEPROM > 서버)
-  Serial.println("DEBUG: WiFi 연결 시도 시작");
-  Serial.flush();
-  delay(100);
-  
+  // WiFi 연결 시도 (우선순위: 하드코딩 > EEPROM > 서버)
   Serial.println("WiFi 연결 시도 중...");
   Serial.flush();
   delay(100);
   
-  Serial.println("DEBUG: wifiConfig->isConfigured() 확인 중...");
+  // 0. 하드코딩된 WiFi로 먼저 시도 (임시 테스트용)
+  Serial.println("하드코딩된 WiFi로 연결 시도 중...");
   Serial.flush();
   delay(100);
   
-  // 1. EEPROM에 저장된 WiFi 정보로 먼저 시도
-  if (wifiConfig->isConfigured()) {
-    Serial.println("DEBUG: EEPROM에 설정 있음");
+  if (wifiConfig->connect(String(WIFI_SSID), String(WIFI_PASSWORD))) {
+    Serial.println("✅ 하드코딩 WiFi로 연결 성공!");
     Serial.flush();
     delay(100);
     
-    Serial.println("EEPROM에서 WiFi 설정 로드");
+    // 연결 성공 시 EEPROM에 저장
+    wifiConfig->save(String(WIFI_SSID), String(WIFI_PASSWORD));
+    Serial.println("WiFi 설정을 EEPROM에 저장했습니다.");
     Serial.flush();
-    delay(100);
-    Serial.println("DEBUG: EEPROM SSID/Password 가져오는 중...");
-    Serial.flush();
-    delay(100);
-    
-    String eepromSSID = wifiConfig->getSSID();
-    String eepromPassword = wifiConfig->getPassword();
-    
-    Serial.print("DEBUG: SSID 길이: ");
-    Serial.println(eepromSSID.length());
-    Serial.flush();
-    delay(100);
-    
-    Serial.println("DEBUG: WiFi.connect() 호출 전");
-    Serial.flush();
-    delay(100);
-    
-    if (wifiConfig->connect(eepromSSID, eepromPassword)) {
-      Serial.println("DEBUG: WiFi.connect() 성공");
-      Serial.flush();
-      delay(100);
-      
-      Serial.println("EEPROM WiFi로 연결 성공!");
-      Serial.flush();
-    } else {
-      Serial.println("DEBUG: WiFi.connect() 실패");
-      Serial.flush();
-      delay(100);
-      
-      Serial.println("EEPROM WiFi 연결 실패.");
-      Serial.println("loop()에서 계속 재시도합니다.");
-      Serial.flush();
-    }
   } else {
-    Serial.println("DEBUG: EEPROM에 설정 없음");
+    Serial.println("하드코딩 WiFi 연결 실패. EEPROM 설정 확인 중...");
     Serial.flush();
     delay(100);
     
-    // 2. EEPROM에 설정이 없으면 서버에서 받기 시도 (임시 WiFi 필요)
-    Serial.println("EEPROM에 WiFi 설정이 없습니다.");
-    Serial.println("서버에서 WiFi 설정을 받으려면 임시 WiFi(핫스팟)에 연결하세요.");
-    Serial.println("또는 웹 대시보드에서 모듈을 추가한 후 아두이노를 재시작하세요.");
-    Serial.flush();
-    delay(100);
-    
-    // 임시 WiFi에 연결되어 있으면 서버에서 설정 받기 시도
-    delay(3000);  // 임시 WiFi 연결을 위한 대기 시간
-    if (WiFi.status() == WL_CONNECTED) {
-      Serial.println("임시 WiFi에 연결됨. 서버에서 WiFi 설정 가져오는 중...");
+    // 1. EEPROM에 저장된 WiFi 정보로 시도
+    if (wifiConfig->isConfigured()) {
+      Serial.println("EEPROM에서 WiFi 설정 로드");
       Serial.flush();
-      String serverSSID = "";
-      String serverPassword = "";
+      delay(100);
       
-      if (apiClient->getWiFiConfig(serverSSID, serverPassword)) {
-        Serial.print("서버에서 WiFi 설정 받음: ");
-        Serial.println(serverSSID);
+      String eepromSSID = wifiConfig->getSSID();
+      String eepromPassword = wifiConfig->getPassword();
+      if (wifiConfig->connect(eepromSSID, eepromPassword)) {
+        Serial.println("EEPROM WiFi로 연결 성공!");
         Serial.flush();
-        
-        // 서버에서 받은 WiFi로 재연결
-        WiFi.disconnect();
-        delay(1000);
-        WiFi.begin(serverSSID.c_str(), serverPassword.c_str());
-        int attempts = 0;
-        while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-          delay(500);
-          Serial.print(".");
-          attempts++;
-        }
-        
-        if (WiFi.status() == WL_CONNECTED) {
-          Serial.println();
-          Serial.print("서버 WiFi로 연결 성공! IP: ");
-          Serial.println(WiFi.localIP());
-          wifiConfig->save(serverSSID, serverPassword);
-          Serial.flush();
-        } else {
-          Serial.println();
-          Serial.println("서버 WiFi 연결 실패. loop()에서 계속 재시도합니다.");
-          Serial.flush();
-        }
       } else {
-        Serial.println("서버에서 WiFi 설정을 받을 수 없습니다.");
-        Serial.println("웹 대시보드에서 모듈을 추가한 후 재시작하세요.");
+        Serial.println("EEPROM WiFi 연결 실패.");
+        Serial.println("loop()에서 계속 재시도합니다.");
         Serial.flush();
       }
     } else {
-      Serial.println("임시 WiFi에 연결되지 않았습니다.");
-      Serial.println("웹 대시보드에서 모듈을 추가한 후 재시작하세요.");
+      Serial.println("EEPROM에 WiFi 설정이 없습니다.");
+      Serial.println("loop()에서 계속 재시도합니다.");
       Serial.flush();
     }
   }
@@ -279,40 +213,14 @@ void setup() {
   Serial.flush();
   delay(100);
   
-  Serial.println("DEBUG: waterPump->turnOff() 호출");
-  Serial.flush();
-  delay(100);
   waterPump->turnOff();
-  
-  Serial.println("DEBUG: airPump->turnOff() 호출");
-  Serial.flush();
-  delay(100);
   airPump->turnOff();
-  
-  Serial.println("DEBUG: valve->turnOff() 호출");
-  Serial.flush();
-  delay(100);
   valve->turnOff();
-  
-  Serial.println("DEBUG: heater->turnOff() 호출");
-  Serial.flush();
-  delay(100);
   heater->turnOff();
-  
-  Serial.println("DEBUG: cooler->turnOff() 호출");
-  Serial.flush();
-  delay(100);
   cooler->turnOff();
-
-  Serial.println("DEBUG: 모든 액추에이터 초기화 완료");
-  Serial.flush();
-  delay(100);
 
   Serial.println("Initialization complete!");
   Serial.println("Starting main loop...");
-  Serial.println("========================================");
-  Serial.flush();
-  delay(100);
 }
 
 void loop() {
@@ -326,58 +234,19 @@ void loop() {
   
   // Check WiFi connection
   if (WiFi.status() != WL_CONNECTED) {
-    static unsigned long lastReconnectAttempt = 0;
-    unsigned long currentTime = millis();
-    
-    // 10초마다 재연결 시도
-    if (currentTime - lastReconnectAttempt >= 10000) {
-      lastReconnectAttempt = currentTime;
-      Serial.println("WiFi disconnected. Attempting to reconnect...");
-      Serial.flush();
-      
-      if (wifiConfig->isConfigured()) {
-        String eepromSSID = wifiConfig->getSSID();
-        String eepromPassword = wifiConfig->getPassword();
-        if (wifiConfig->connect(eepromSSID, eepromPassword)) {
-          Serial.println("WiFi 재연결 성공!");
-          Serial.flush();
-        } else {
-          Serial.println("WiFi 재연결 실패. 10초 후 다시 시도합니다.");
-          Serial.flush();
-        }
-      } else {
-        // EEPROM에 설정이 없으면 서버에서 받기 시도
-        Serial.println("EEPROM에 WiFi 설정이 없습니다. 서버에서 가져오는 중...");
-        Serial.flush();
-        
-        // 임시 WiFi에 연결되어 있으면 서버에서 설정 받기
-        if (WiFi.status() == WL_CONNECTED) {
-          String serverSSID = "";
-          String serverPassword = "";
-          if (apiClient->getWiFiConfig(serverSSID, serverPassword)) {
-            Serial.print("서버에서 WiFi 설정 받음: ");
-            Serial.println(serverSSID);
-            Serial.flush();
-            
-            WiFi.disconnect();
-            delay(1000);
-            if (wifiConfig->connect(serverSSID, serverPassword)) {
-              Serial.println("서버 WiFi로 연결 성공!");
-              wifiConfig->save(serverSSID, serverPassword);
-              Serial.flush();
-            }
-          }
-        } else {
-          Serial.println("임시 WiFi에 연결되지 않았습니다.");
-          Serial.println("웹 대시보드에서 모듈을 추가한 후 재시작하세요.");
-          Serial.flush();
-        }
+    Serial.println("WiFi disconnected. Attempting to reconnect...");
+    Serial.flush();
+    if (wifiConfig->isConfigured()) {
+      String eepromSSID = wifiConfig->getSSID();
+      String eepromPassword = wifiConfig->getPassword();
+      if (!wifiConfig->connect(eepromSSID, eepromPassword)) {
+        delay(5000);
+        return;
       }
+    } else {
+      delay(5000);
+      return;
     }
-    
-    // WiFi가 연결되지 않으면 센서 읽기/전송 건너뛰기
-    delay(1000);
-    return;
   }
 
   unsigned long currentTime = millis();
@@ -387,6 +256,7 @@ void loop() {
     lastSensorUpdate = currentTime;
     
     Serial.println("Reading sensors...");
+    Serial.flush();
     
     // Read all sensors
     float waterLevel = waterLevelSensor->read();
@@ -418,10 +288,13 @@ void loop() {
 
     // Send data to server
     Serial.println("Sending sensor data to server...");
+    Serial.flush();
     if (apiClient->sendSensorData(waterLevel, temperature, doLevel, phLevel, lightLevel)) {
       Serial.println("Sensor data sent successfully!");
+      Serial.flush();
     } else {
       Serial.println("Failed to send sensor data!");
+      Serial.flush();
     }
 
     // Auto control based on sensor readings
@@ -448,19 +321,6 @@ void loop() {
     }
   }
 
-  // WiFi 연결 상태 주기적 출력 (1분마다)
-  static unsigned long lastStatusPrint = 0;
-  if (currentTime - lastStatusPrint >= 60000) {
-    lastStatusPrint = currentTime;
-    Serial.print("System running. WiFi: ");
-    Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
-    if (WiFi.status() == WL_CONNECTED) {
-      Serial.print("IP: ");
-      Serial.println(WiFi.localIP());
-    }
-    Serial.flush();
-  }
-  
   delay(1000); // Small delay to prevent overwhelming the system
 }
 

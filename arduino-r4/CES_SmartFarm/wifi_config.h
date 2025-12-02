@@ -41,12 +41,15 @@ private:
 
 public:
   WiFiConfig() {
+    // 주의: 이 생성자는 전역 객체로 생성될 때 호출됨
+    // 이 시점에는 Serial이 아직 초기화되지 않았을 수 있음
     // Arduino R4 WiFi EEPROM은 begin() 없이 바로 사용 가능
     loadFromEEPROM();
   }
   
   // EEPROM에서 설정 로드
   void loadFromEEPROM() {
+    // 주의: 이 함수는 생성자에서 호출될 수 있으므로 Serial 사용 주의
     configured = EEPROM.read(EEPROM_CONFIGURED_ADDR) == 1;
     if (configured) {
       ssid = readStringFromEEPROM(EEPROM_SSID_ADDR, 64);

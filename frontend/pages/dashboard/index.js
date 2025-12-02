@@ -19,7 +19,7 @@ export default function Dashboard() {
   const [recentSensorData, setRecentSensorData] = useState({});
 
   useEffect(() => {
-    if (!isAuthenticated()) {
+    if (typeof window !== 'undefined' && !isAuthenticated()) {
       router.push('/login');
       return;
     }
@@ -72,7 +72,8 @@ export default function Dashboard() {
     }
   };
 
-  if (!isAuthenticated()) {
+  // 클라이언트에서만 인증 체크 (hydration 에러 방지)
+  if (typeof window !== 'undefined' && !isAuthenticated()) {
     return null;
   }
 

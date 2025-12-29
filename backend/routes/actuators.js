@@ -4,39 +4,21 @@ const Module = require('../models/Module');
 const auth = require('../middleware/auth');
 const { actuatorControlValidation, validate } = require('../utils/validation');
 
-// Optional auth middleware (doesn't fail if no token)
-const optionalAuth = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (token) {
-    return auth(req, res, next);
-  }
-  req.user = null;
-  next();
-};
-
 const router = express.Router();
 
 // @route   GET /api/actuators/status/:moduleId
-// @desc    Get actuator status for a module (Public for Arduino, Private for web)
-// @access  Public (아두이노에서 직접 호출 가능)
-router.get('/status/:moduleId', optionalAuth, async (req, res) => {
+// @desc    Get actuator status for a module
+// @access  Private
+router.get('/status/:moduleId', auth, async (req, res) => {
   try {
     const { moduleId } = req.params;
 
-    // Verify module exists
+    // Verify module belongs to user
     const module = await Module.findByModuleId(moduleId);
-    if (!module) {
+    if (!module || module.user_id !== req.user.id) {
       return res.status(404).json({
         success: false,
         message: 'Module not found'
-      });
-    }
-
-    // If authenticated, verify module belongs to user
-    if (req.user && module.user_id !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
       });
     }
 
@@ -45,21 +27,21 @@ router.get('/status/:moduleId', optionalAuth, async (req, res) => {
     if (!status) {
       // Return default status if not found
       return res.json({
-        water_pump: false,
-        air_pump: false,
-        valve: false,
-        heater: false,
-        cooler: false
+        success: true,
+        status: {
+          module_id: moduleId,
+          water_pump: false,
+          air_pump: false,
+          valve: false,
+          heater: false,
+          cooler: false
+        }
       });
     }
 
-    // Return status directly (without success wrapper for Arduino compatibility)
     res.json({
-      water_pump: status.water_pump || false,
-      air_pump: status.air_pump || false,
-      valve: status.valve || false,
-      heater: status.heater || false,
-      cooler: status.cooler || false
+      success: true,
+      status
     });
   } catch (error) {
     console.error('Get actuator status error:', error);

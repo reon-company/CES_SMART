@@ -2,12 +2,10 @@
 #define CONFIG_H
 
 // WiFi Configuration
-// 임시 테스트용 하드코딩 (구현 후 제거 예정)
-#define WIFI_SSID "Kyle_Kim_0512"
-#define WIFI_PASSWORD "Dresden-08"
-
 // 하드코딩 대신 WiFi AP 모드로 웹 설정 페이지 사용
 // 첫 부팅 시 "CES_SmartFarm_Setup" WiFi에 연결하여 설정
+// #define WIFI_SSID "SK_WiFiGIGA91A3_2.4G"  // 사용 안 함 (EEPROM에 저장됨)
+// #define WIFI_PASSWORD "2006076422"        // 사용 안 함 (EEPROM에 저장됨)
 
 // API Configuration
 #define API_BASE_URL "http://3.36.109.155:3000"

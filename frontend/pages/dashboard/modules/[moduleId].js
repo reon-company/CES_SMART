@@ -12,20 +12,15 @@ export default function ModuleDetailPage() {
   const { moduleId } = router.query;
   const [module, setModule] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
-  const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      if (!isAuthenticated()) {
-        router.push('/login');
-        return;
-      }
-      setAuthenticated(true);
-      if (moduleId) {
-        fetchModule();
-      }
+    if (!isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    if (moduleId) {
+      fetchModule();
     }
   }, [moduleId, router]);
 
@@ -33,18 +28,11 @@ export default function ModuleDetailPage() {
     try {
       setLoading(true);
       const response = await modulesAPI.getById(moduleId);
-      if (response.success && response.module) {
+      if (response.success) {
         setModule(response.module);
-      } else {
-        console.error('Module not found or access denied');
-        router.push('/dashboard/modules');
       }
     } catch (error) {
       console.error('Failed to fetch module:', error);
-      // 에러 상세 정보 출력
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-      }
       router.push('/dashboard/modules');
     } finally {
       setLoading(false);
@@ -64,10 +52,6 @@ export default function ModuleDetailPage() {
       </span>
     );
   };
-
-  if (!mounted || !authenticated) {
-    return null;
-  }
 
   if (loading) {
     return (
@@ -113,26 +97,12 @@ export default function ModuleDetailPage() {
             </button>
             {getStatusBadge(module.status)}
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="text-5xl">🔌</div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-1">{module.name}</h1>
-                <p className="text-gray-600">모듈 ID: <span className="font-mono font-semibold">{module.module_id}</span></p>
-                <div className="mt-2 text-sm text-gray-500 space-y-1">
-                  <p>생성일: {new Date(module.created_at).toLocaleString('ko-KR')}</p>
-                  {module.updated_at && (
-                    <p>마지막 업데이트: {new Date(module.updated_at).toLocaleString('ko-KR')}</p>
-                  )}
-                </div>
-              </div>
+          <div className="flex items-center space-x-4">
+            <div className="text-5xl">🔌</div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">{module.name}</h1>
+              <p className="text-gray-600">모듈 ID: <span className="font-mono font-semibold">{module.module_id}</span></p>
             </div>
-            {module.wifi_ssid && (
-              <div className="text-right">
-                <p className="text-sm text-gray-500 mb-1">WiFi 네트워크</p>
-                <p className="text-lg font-semibold text-gray-900">📶 {module.wifi_ssid}</p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -165,11 +135,8 @@ export default function ModuleDetailPage() {
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <SensorChart moduleId={module.module_id} sensorType="ph_level" title="pH" />
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 lg:col-span-2">
               <SensorChart moduleId={module.module_id} sensorType="light_level" title="조도 (%)" />
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <SensorChart moduleId={module.module_id} sensorType="wifi_rssi" title="WiFi 신호 강도 (dBm)" />
             </div>
           </div>
         </div>

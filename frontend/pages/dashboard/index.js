@@ -8,8 +8,6 @@ import { sensorsAPI } from '../../lib/api/sensors';
 
 export default function Dashboard() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-  const [authenticated, setAuthenticated] = useState(false);
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [moduleStats, setModuleStats] = useState({
@@ -21,11 +19,7 @@ export default function Dashboard() {
   const [recentSensorData, setRecentSensorData] = useState({});
 
   useEffect(() => {
-    setMounted(true);
-    const auth = isAuthenticated();
-    setAuthenticated(auth);
-    
-    if (!auth) {
+    if (!isAuthenticated()) {
       router.push('/login');
       return;
     }
@@ -78,18 +72,7 @@ export default function Dashboard() {
     }
   };
 
-  // 클라이언트 마운트 전에는 로딩 화면 표시 (hydration 에러 방지)
-  if (!mounted) {
-    return (
-      <DashboardLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-lg">로딩 중...</div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!authenticated) {
+  if (!isAuthenticated()) {
     return null;
   }
 
@@ -267,14 +250,6 @@ export default function Dashboard() {
                           <p className="text-lg font-semibold text-gray-900">
                             {sensorData.do_level !== null && sensorData.do_level !== undefined
                               ? `${Number(sensorData.do_level).toFixed(2)} mg/L`
-                              : 'N/A'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 mb-1">WiFi 신호</p>
-                          <p className="text-lg font-semibold text-gray-900">
-                            {sensorData.wifi_rssi !== null && sensorData.wifi_rssi !== undefined
-                              ? `${sensorData.wifi_rssi} dBm`
                               : 'N/A'}
                           </p>
                         </div>

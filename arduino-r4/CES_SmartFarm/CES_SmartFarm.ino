@@ -1,4 +1,18 @@
-// CES SmartFarm - Arduino R4 Main Control Loop
+/*
+ * CES SmartFarm - Arduino R4 Main Control Loop
+ * 
+ * Version: 1.0.4
+ * Date: 2024
+ * 
+ * Features:
+ * - WiFi AP 모드 설정 포털 (EEPROM 저장)
+ * - 센서 데이터 수집 및 서버 전송 (30초 간격)
+ * - 액추에이터 서버 제어 (10초 간격)
+ * - 자동 제어 로직 (임계값 기반)
+ * - WiFi 자동 재연결
+ * - 상세한 시리얼 디버깅 메시지
+ */
+
 #include "config.h"
 #include "wifi_config.h"  // WiFi 웹 설정 추가
 #include "api_client.h"
@@ -17,17 +31,15 @@
 #include "actuators/Heater.h"
 #include "actuators/Cooler.h"
 
-// 전역 객체를 포인터로 선언 (setup()에서 초기화)
-// 전역 객체 생성자가 setup() 전에 실행되어 문제를 일으킬 수 있음
-
-// Sensor objects (포인터로 선언)
+// Sensor objects - Use pointers to delay construction until setup()
+// This prevents constructor issues before Serial is ready
 WaterLevelSensor* waterLevelSensor = nullptr;
 TemperatureSensor* temperatureSensor = nullptr;
 DOSensor* doSensor = nullptr;
 PHSensor* phSensor = nullptr;
 LightSensor* lightSensor = nullptr;
 
-// Actuator objects (포인터로 선언)
+// Actuator objects - Use pointers to delay construction until setup()
 WaterPump* waterPump = nullptr;
 AirPump* airPump = nullptr;
 Valve* valve = nullptr;
@@ -35,351 +47,451 @@ Heater* heater = nullptr;
 Cooler* cooler = nullptr;
 
 // WiFi Config Manager (EEPROM에 저장된 WiFi 정보 사용)
-WiFiConfig* wifiConfig = nullptr;
+// Constructor is safe - no EEPROM access
+WiFiConfig wifiConfig;
 
-// API client
-APIClient* apiClient = nullptr;
+// API client - Constructor is safe (just string parsing)
+APIClient apiClient;
+
+// ===== CRITICAL: Setup function - FIRST thing that runs after global constructors =====
+// This MUST execute even if global constructors have issues
 
 // Timing variables
 unsigned long lastSensorUpdate = 0;
 unsigned long lastActuatorCheck = 0;
 
 // Default thresholds (can be updated from server)
-float waterLevelMin = 20.0;  // Minimum water level (%)
-float temperatureMin = 20.0; // Minimum temperature (°C)
-float temperatureMax = 28.0; // Maximum temperature (°C)
-float doMin = 5.0;           // Minimum DO (mg/L)
-float phMin = 6.5;           // Minimum pH
-float phMax = 8.5;           // Maximum pH
-float lightLevelMin = 30.0;  // Minimum light level (%)
+float waterLevelMin = 20.0;      // Minimum water level (%)
+float waterLevelMax = 80.0;     // Maximum water level (%)
+float temperatureMin = 20.0;    // Minimum temperature (°C)
+float temperatureMax = 28.0;    // Maximum temperature (°C)
+float temperatureHysteresis = 1.0; // Hysteresis for temperature control (°C)
+float doMin = 5.0;              // Minimum DO (mg/L)
+float doMax = 8.0;              // Maximum DO (mg/L)
+float phMin = 6.5;              // Minimum pH
+float phMax = 8.5;              // Maximum pH
+float lightLevelMin = 30.0;     // Minimum light level (%)
+
+// Log level control (0=none, 1=essential, 2=detailed)
+#define LOG_LEVEL 1
+
+// WiFi reconnect state machine
+enum WiFiReconnectState {
+  WIFI_RECONNECT_IDLE,
+  WIFI_RECONNECT_ATTEMPTING,
+  WIFI_RECONNECT_WAITING
+};
+WiFiReconnectState wifiReconnectState = WIFI_RECONNECT_IDLE;
+unsigned long wifiReconnectLastAttempt = 0;
+int wifiReconnectAttempts = 0;
 
 void setup() {
-  // 시리얼 초기화 - 가장 먼저!
+  // ===== ABSOLUTE FIRST: Hardware initialization =====
+  // LED 초기화 (Arduino R4 WiFi) - NO dependencies
+  #ifdef LED_BUILTIN
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, HIGH);
+  #else
+    pinMode(13, OUTPUT);
+    digitalWrite(13, HIGH);
+  #endif
+  
+  // Serial communication (9600 baud - MUST match Serial Monitor)
+  // This MUST be initialized before any Serial.print()
   Serial.begin(9600);
-  delay(2000);  // 시리얼 포트 초기화 대기 시간 증가
   
-  Serial.println("========================================");
-  Serial.println("DEBUG: setup() 함수 시작");
-  Serial.println("========================================");
-  Serial.flush();
-  delay(100);
+  // CRITICAL: Wait for serial port - but with timeout
+  // Arduino R4 may not have Serial ready immediately
+  unsigned long serialWaitStart = millis();
+  while (!Serial && (millis() - serialWaitStart < 2000)) {
+    // Wait max 2 seconds for serial
+  }
   
-  Serial.println("DEBUG: Serial 초기화 완료");
+  // Immediate test output - if this doesn't appear, setup() didn't run
+  Serial.println("SETUP_START");  // Simple ASCII, no formatting
   Serial.flush();
-  delay(100);
   
-  // 전역 객체 초기화 (setup()에서 수행)
-  Serial.println("DEBUG: 전역 객체 초기화 시작...");
-  Serial.flush();
-  delay(100);
+  delay(100);  // Small delay for serial buffer
   
-  // WiFi Config 초기화
-  wifiConfig = new WiFiConfig();
-  Serial.println("DEBUG: WiFiConfig 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  // API Client 초기화
-  apiClient = new APIClient();
-  Serial.println("DEBUG: APIClient 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  // 센서 객체 초기화
-  waterLevelSensor = new WaterLevelSensor();
-  Serial.println("DEBUG: WaterLevelSensor 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  temperatureSensor = new TemperatureSensor();
-  Serial.println("DEBUG: TemperatureSensor 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  doSensor = new DOSensor();
-  Serial.println("DEBUG: DOSensor 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  phSensor = new PHSensor();
-  Serial.println("DEBUG: PHSensor 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  lightSensor = new LightSensor();
-  Serial.println("DEBUG: LightSensor 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  // 액추에이터 객체 초기화
-  waterPump = new WaterPump();
-  Serial.println("DEBUG: WaterPump 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  airPump = new AirPump();
-  Serial.println("DEBUG: AirPump 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  valve = new Valve();
-  Serial.println("DEBUG: Valve 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  heater = new Heater();
-  Serial.println("DEBUG: Heater 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  cooler = new Cooler();
-  Serial.println("DEBUG: Cooler 초기화 완료");
-  Serial.flush();
-  delay(100);
-  
-  Serial.println("DEBUG: 모든 전역 객체 초기화 완료!");
-  Serial.flush();
-  delay(100);
-  
-  Serial.println("=== CES SmartFarm Arduino R4 Starting ===");
-  Serial.print("Module ID: ");
-  Serial.println(MODULE_ID);
-  Serial.flush();
-  delay(100);
-
-  // WiFi 연결 시도 (우선순위: 하드코딩 > EEPROM > 서버)
-  Serial.println("WiFi 연결 시도 중...");
-  Serial.flush();
-  delay(100);
-  
-  // 0. 하드코딩된 WiFi로 먼저 시도 (임시 테스트용)
-  Serial.println("하드코딩된 WiFi로 연결 시도 중...");
-  Serial.flush();
-  delay(100);
-  
-  if (wifiConfig->connect(String(WIFI_SSID), String(WIFI_PASSWORD))) {
-    Serial.println("✅ 하드코딩 WiFi로 연결 성공!");
-    Serial.flush();
-    delay(100);
-    
-    // 연결 성공 시 EEPROM에 저장
-    wifiConfig->save(String(WIFI_SSID), String(WIFI_PASSWORD));
-    Serial.println("WiFi 설정을 EEPROM에 저장했습니다.");
-    Serial.flush();
-  } else {
-    Serial.println("하드코딩 WiFi 연결 실패. EEPROM 설정 확인 중...");
-    Serial.flush();
-    delay(100);
-    
-    // 1. EEPROM에 저장된 WiFi 정보로 시도
-    if (wifiConfig->isConfigured()) {
-      Serial.println("EEPROM에서 WiFi 설정 로드");
-      Serial.flush();
-      delay(100);
-      
-      String eepromSSID = wifiConfig->getSSID();
-      String eepromPassword = wifiConfig->getPassword();
-      if (wifiConfig->connect(eepromSSID, eepromPassword)) {
-        Serial.println("EEPROM WiFi로 연결 성공!");
-        Serial.flush();
-      } else {
-        Serial.println("EEPROM WiFi 연결 실패.");
-        Serial.println("loop()에서 계속 재시도합니다.");
-        Serial.flush();
-      }
-    } else {
-      Serial.println("EEPROM에 WiFi 설정이 없습니다.");
-      Serial.println("loop()에서 계속 재시도합니다.");
-      Serial.flush();
-    }
+  if (LOG_LEVEL >= 1) {
+    Serial.println();
+    Serial.println("========================================");
+    Serial.println("CES SmartFarm Arduino R4 Starting");
+    Serial.println("========================================");
+    Serial.print("Module ID: ");
+    Serial.println(MODULE_ID);
+    Serial.print("Start time: ");
+    Serial.print(millis());
+    Serial.println(" ms");
+    Serial.println("========================================");
   }
 
-  Serial.println("DEBUG: WiFi 초기화 완료, 센서 초기화 시작");
-  Serial.flush();
-  delay(100);
+  // CRITICAL: Initialize sensor/actuator objects NOW (after Serial is ready)
+  // This prevents constructor issues during global object initialization
+  Serial.println("Initializing sensors and actuators...");
   
-  // Initialize sensors
-  Serial.println("Initializing sensors...");
-  Serial.flush();
-  delay(100);
-  // Sensors are initialized in their constructors
-
-  Serial.println("DEBUG: 센서 초기화 완료, 액추에이터 초기화 시작");
-  Serial.flush();
-  delay(100);
+  waterLevelSensor = new WaterLevelSensor();
+  temperatureSensor = new TemperatureSensor();
+  doSensor = new DOSensor();
+  phSensor = new PHSensor();
+  lightSensor = new LightSensor();
+  
+  waterPump = new WaterPump();
+  airPump = new AirPump();
+  valve = new Valve();
+  heater = new Heater();
+  cooler = new Cooler();
+  
+  Serial.println("Sensors and actuators initialized");
+  
+  // CRITICAL: Load EEPROM config NOW (after Serial is ready)
+  Serial.println("Loading EEPROM config...");
+  wifiConfig.loadFromEEPROM();
+  
+  // WiFi connection process
+  if (LOG_LEVEL >= 1) {
+    Serial.println();
+    Serial.println("========================================");
+    Serial.println("WiFi Connection Process");
+    Serial.println("========================================");
+  }
+  
+  // Try EEPROM stored WiFi first
+  if (wifiConfig.isConfigured()) {
+    if (LOG_LEVEL >= 1) {
+      Serial.println("EEPROM WiFi config found");
+      Serial.print("SSID: ");
+      Serial.println(wifiConfig.getSSID());
+    }
+    
+    if (wifiConfig.connect()) {
+      if (LOG_LEVEL >= 1) {
+        Serial.println("WiFi connected!");
+      }
+    } else {
+      // EEPROM connection failed - start config portal directly
+      // (Removed server WiFi config path for simplicity and reliability)
+      if (LOG_LEVEL >= 1) {
+        Serial.println("EEPROM WiFi connection failed");
+        Serial.println("Starting config portal...");
+      }
+      delay(1000);
+      wifiConfig.startConfigPortal();
+    }
+  } else {
+    // No EEPROM config - start config portal
+    if (LOG_LEVEL >= 1) {
+      Serial.println("No EEPROM WiFi config");
+      Serial.println("Starting config portal...");
+      Serial.println("Connect to WiFi: CES_SmartFarm_Setup");
+      Serial.println("Then open: http://192.168.4.1");
+    }
+    delay(1000);
+    wifiConfig.startConfigPortal();
+  }
+  
+  Serial.println();
 
   // Initialize actuators (all OFF initially)
-  Serial.println("Initializing actuators...");
-  Serial.flush();
-  delay(100);
+  if (waterPump) waterPump->turnOff();
+  if (airPump) airPump->turnOff();
+  if (valve) valve->turnOff();
+  if (heater) heater->turnOff();
+  if (cooler) cooler->turnOff();
   
-  waterPump->turnOff();
-  airPump->turnOff();
-  valve->turnOff();
-  heater->turnOff();
-  cooler->turnOff();
-
-  Serial.println("Initialization complete!");
-  Serial.println("Starting main loop...");
+  if (LOG_LEVEL >= 2) {
+    Serial.println("Actuators set to OFF");
+  }
+  
+  if (LOG_LEVEL >= 1) {
+    Serial.println("========================================");
+    Serial.println("Initialization complete!");
+    Serial.print("WiFi status: ");
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.print("Connected | IP: ");
+      Serial.println(WiFi.localIP());
+    } else if (WiFi.status() == WL_AP_LISTENING || WiFi.status() == WL_AP_CONNECTED) {
+      Serial.println("AP mode (config portal)");
+    } else {
+      Serial.println("Not connected");
+    }
+    Serial.println("========================================");
+    Serial.println("Main loop starting...");
+    Serial.println();
+  }
 }
 
 void loop() {
-  static bool firstLoop = true;
-  if (firstLoop) {
-    Serial.println("DEBUG: loop() 함수 첫 실행!");
-    Serial.flush();
-    delay(100);
-    firstLoop = false;
+  // LED blink (heartbeat - 1 second interval)
+  static unsigned long lastBlink = 0;
+  static bool ledState = false;
+  if (millis() - lastBlink > 1000) {
+    lastBlink = millis();
+    ledState = !ledState;
+    #ifdef LED_BUILTIN
+      digitalWrite(LED_BUILTIN, ledState);
+    #else
+      digitalWrite(13, ledState);
+    #endif
   }
   
-  // Check WiFi connection
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi disconnected. Attempting to reconnect...");
-    Serial.flush();
-    if (wifiConfig->isConfigured()) {
-      String eepromSSID = wifiConfig->getSSID();
-      String eepromPassword = wifiConfig->getPassword();
-      if (!wifiConfig->connect(eepromSSID, eepromPassword)) {
-        delay(5000);
-        return;
-      }
+  // WiFi connection state machine (non-blocking)
+  int wifiStatus = WiFi.status();
+  if (wifiStatus != WL_CONNECTED && wifiStatus != WL_AP_LISTENING && wifiStatus != WL_AP_CONNECTED) {
+    // WiFi disconnected - attempt reconnect using state machine
+    unsigned long now = millis();
+    
+    switch (wifiReconnectState) {
+      case WIFI_RECONNECT_IDLE:
+        wifiReconnectState = WIFI_RECONNECT_ATTEMPTING;
+        wifiReconnectLastAttempt = now;
+        wifiReconnectAttempts = 0;
+        if (LOG_LEVEL >= 1) {
+          Serial.println("WiFi disconnected - attempting reconnect");
+        }
+        break;
+        
+      case WIFI_RECONNECT_ATTEMPTING:
+        if (wifiReconnectAttempts < 3) {
+          if (now - wifiReconnectLastAttempt > 5000) {  // 5 second interval
+            wifiReconnectLastAttempt = now;
+            wifiReconnectAttempts++;
+            if (wifiConfig.reconnect()) {
+              wifiReconnectState = WIFI_RECONNECT_IDLE;
+              if (LOG_LEVEL >= 1) {
+                Serial.println("WiFi reconnected!");
+              }
+            } else {
+              if (LOG_LEVEL >= 1) {
+                Serial.print("Reconnect attempt ");
+                Serial.print(wifiReconnectAttempts);
+                Serial.println("/3 failed");
+              }
+            }
+          }
+        } else {
+          // All attempts failed - wait before retrying
+          wifiReconnectState = WIFI_RECONNECT_WAITING;
+          wifiReconnectLastAttempt = now;
+        }
+        break;
+        
+      case WIFI_RECONNECT_WAITING:
+        if (now - wifiReconnectLastAttempt > 30000) {  // Wait 30 seconds
+          wifiReconnectState = WIFI_RECONNECT_IDLE;  // Reset and try again
+        }
+        break;
+    }
+  } else {
+    // WiFi connected or in AP mode - reset reconnect state
+    if (wifiReconnectState != WIFI_RECONNECT_IDLE) {
+      wifiReconnectState = WIFI_RECONNECT_IDLE;
+    }
+  }
+  
+  // Periodic WiFi status (every 30 seconds, non-blocking)
+  static unsigned long lastStatusPrint = 0;
+  if (LOG_LEVEL >= 2 && millis() - lastStatusPrint > 30000) {
+    lastStatusPrint = millis();
+    Serial.print("[");
+    Serial.print(millis() / 1000);
+    Serial.print("s] WiFi: ");
+    if (wifiStatus == WL_CONNECTED) {
+      Serial.print("Connected | IP: ");
+      Serial.print(WiFi.localIP());
+      Serial.print(" | RSSI: ");
+      Serial.print(WiFi.RSSI());
+      Serial.println(" dBm");
+    } else if (wifiStatus == WL_AP_LISTENING || wifiStatus == WL_AP_CONNECTED) {
+      Serial.println("AP mode");
     } else {
-      delay(5000);
-      return;
+      Serial.print("Disconnected (");
+      Serial.print(wifiStatus);
+      Serial.println(")");
     }
   }
 
   unsigned long currentTime = millis();
 
-  // Send sensor data every 30 seconds
-  if (currentTime - lastSensorUpdate >= SENSOR_UPDATE_INTERVAL || lastSensorUpdate == 0) {
+  // Send sensor data every 30 seconds (only if WiFi connected)
+  if (WiFi.status() == WL_CONNECTED && currentTime - lastSensorUpdate >= SENSOR_UPDATE_INTERVAL) {
     lastSensorUpdate = currentTime;
     
-    Serial.println("Reading sensors...");
-    Serial.flush();
+    if (LOG_LEVEL >= 2) {
+      Serial.println("Reading sensors...");
+    }
     
     // Read all sensors
+    if (!waterLevelSensor || !temperatureSensor || !doSensor || !phSensor || !lightSensor) {
+      Serial.println("ERROR: Sensors not initialized!");
+      return;
+    }
+    
     float waterLevel = waterLevelSensor->read();
     float temperature = temperatureSensor->read();
     float doLevel = doSensor->read();
     float phLevel = phSensor->read();
     float lightLevel = lightSensor->read();
 
-    // Print sensor values
-    Serial.print("Water Level: ");
-    Serial.print(waterLevel);
-    Serial.println("%");
-    
-    Serial.print("Temperature: ");
-    Serial.print(temperature);
-    Serial.println("°C");
-    
-    Serial.print("DO Level: ");
-    Serial.print(doLevel);
-    Serial.println("mg/L");
-    
-    Serial.print("pH Level: ");
-    Serial.print(phLevel);
-    Serial.println();
-    
-    Serial.print("Light Level: ");
-    Serial.print(lightLevel);
-    Serial.println("%");
-    
-    // WiFi 신호 강도 출력
-    if (WiFi.status() == WL_CONNECTED) {
-      Serial.print("WiFi RSSI: ");
-      Serial.print(WiFi.RSSI());
-      Serial.println(" dBm");
+    // Print sensor values (only if detailed logging)
+    if (LOG_LEVEL >= 2) {
+      Serial.print("Water: ");
+      Serial.print(waterLevel);
+      Serial.print("% | Temp: ");
+      Serial.print(temperature);
+      Serial.print("C | DO: ");
+      Serial.print(doLevel);
+      Serial.print("mg/L | pH: ");
+      Serial.print(phLevel);
+      Serial.print(" | Light: ");
+      Serial.print(lightLevel);
+      Serial.println("%");
     }
 
     // Send data to server
-    Serial.println("Sending sensor data to server...");
-    Serial.flush();
-    if (apiClient->sendSensorData(waterLevel, temperature, doLevel, phLevel, lightLevel)) {
-      Serial.println("Sensor data sent successfully!");
-      Serial.flush();
+    if (apiClient.sendSensorData(waterLevel, temperature, doLevel, phLevel, lightLevel)) {
+      if (LOG_LEVEL >= 1) {
+        Serial.println("Sensor data sent");
+      }
     } else {
-      Serial.println("Failed to send sensor data!");
-      Serial.flush();
+      if (LOG_LEVEL >= 1) {
+        Serial.println("Sensor data send failed");
+      }
     }
 
-    // Auto control based on sensor readings
+    // Auto control (safety fallback - server control takes priority)
     performAutoControl(waterLevel, temperature, doLevel, phLevel, lightLevel);
   }
 
-  // Check actuator status from server every 10 seconds
-  if (currentTime - lastActuatorCheck >= 10000) {
+  // Check actuator status from server every 10 seconds (server control priority)
+  if (WiFi.status() == WL_CONNECTED && currentTime - lastActuatorCheck >= 10000) {
     lastActuatorCheck = currentTime;
     
     bool serverWaterPump, serverAirPump, serverValve, serverHeater, serverCooler;
     
-    if (apiClient->getActuatorStatus(serverWaterPump, serverAirPump, serverValve, serverHeater, serverCooler)) {
-      // Update actuators based on server status
-      waterPump->setState(serverWaterPump);
-      airPump->setState(serverAirPump);
-      valve->setState(serverValve);
-      heater->setState(serverHeater);
-      cooler->setState(serverCooler);
+    if (apiClient.getActuatorStatus(serverWaterPump, serverAirPump, serverValve, serverHeater, serverCooler)) {
+      // Server control takes priority - update actuators
+      if (waterPump) waterPump->setState(serverWaterPump);
+      if (airPump) airPump->setState(serverAirPump);
+      if (valve) valve->setState(serverValve);
+      if (heater) heater->setState(serverHeater);
+      if (cooler) cooler->setState(serverCooler);
       
-      Serial.println("Actuator status updated from server");
+      if (LOG_LEVEL >= 2) {
+        Serial.println("Actuators updated from server");
+      }
     } else {
-      Serial.println("Failed to get actuator status from server");
+      if (LOG_LEVEL >= 2) {
+        Serial.println("Failed to get actuator status");
+      }
     }
   }
 
-  delay(1000); // Small delay to prevent overwhelming the system
+  // Small non-blocking delay
+  delay(10);
 }
 
 void performAutoControl(float waterLevel, float temperature, float doLevel, float phLevel, float lightLevel) {
-  // Auto control logic based on thresholds
+  // Auto control logic (safety fallback - server control has priority)
+  // Only runs if server control is not available
   
-  // Water level control
+  // Water level control with hysteresis
+  static bool waterPumpAutoState = false;
   if (waterLevel < waterLevelMin) {
-    waterPump->turnOn();
-    Serial.println("Auto: Water pump ON (low water level)");
-  } else if (waterLevel > 80.0) {
-    waterPump->turnOff();
-    Serial.println("Auto: Water pump OFF (sufficient water level)");
+    if (!waterPumpAutoState && waterPump) {
+      waterPump->turnOn();
+      waterPumpAutoState = true;
+      if (LOG_LEVEL >= 1) {
+        Serial.println("Auto: Water pump ON (low level)");
+      }
+    }
+  } else if (waterLevel > waterLevelMax) {
+    if (waterPumpAutoState && waterPump) {
+      waterPump->turnOff();
+      waterPumpAutoState = false;
+      if (LOG_LEVEL >= 1) {
+        Serial.println("Auto: Water pump OFF (sufficient level)");
+      }
+    }
   }
 
-  // Temperature control
-  if (temperature < temperatureMin) {
-    heater->turnOn();
-    cooler->turnOff();
-    Serial.println("Auto: Heater ON (low temperature)");
-  } else if (temperature > temperatureMax) {
-    heater->turnOff();
-    cooler->turnOn();
-    Serial.println("Auto: Cooler ON (high temperature)");
+  // Temperature control with hysteresis
+  static bool heaterAutoState = false;
+  static bool coolerAutoState = false;
+  if (temperature < (temperatureMin - temperatureHysteresis)) {
+    if (!heaterAutoState && heater && cooler) {
+      heater->turnOn();
+      cooler->turnOff();
+      heaterAutoState = true;
+      coolerAutoState = false;
+      if (LOG_LEVEL >= 1) {
+        Serial.println("Auto: Heater ON (low temp)");
+      }
+    }
+  } else if (temperature > (temperatureMax + temperatureHysteresis)) {
+    if (!coolerAutoState && heater && cooler) {
+      heater->turnOff();
+      cooler->turnOn();
+      heaterAutoState = false;
+      coolerAutoState = true;
+      if (LOG_LEVEL >= 1) {
+        Serial.println("Auto: Cooler ON (high temp)");
+      }
+    }
   } else {
-    heater->turnOff();
-    cooler->turnOff();
-    Serial.println("Auto: Temperature OK");
+    // Within acceptable range - turn off both
+    if ((heaterAutoState || coolerAutoState) && heater && cooler) {
+      heater->turnOff();
+      cooler->turnOff();
+      heaterAutoState = false;
+      coolerAutoState = false;
+      if (LOG_LEVEL >= 2) {
+        Serial.println("Auto: Temperature OK");
+      }
+    }
   }
 
-  // DO control
+  // DO control with hysteresis
+  static bool airPumpAutoState = false;
   if (doLevel < doMin) {
-    airPump->turnOn();
-    Serial.println("Auto: Air pump ON (low DO)");
-  } else if (doLevel > 8.0) {
-    airPump->turnOff();
-    Serial.println("Auto: Air pump OFF (sufficient DO)");
+    if (!airPumpAutoState && airPump) {
+      airPump->turnOn();
+      airPumpAutoState = true;
+      if (LOG_LEVEL >= 1) {
+        Serial.println("Auto: Air pump ON (low DO)");
+      }
+    }
+  } else if (doLevel > doMax) {
+    if (airPumpAutoState && airPump) {
+      airPump->turnOff();
+      airPumpAutoState = false;
+      if (LOG_LEVEL >= 1) {
+        Serial.println("Auto: Air pump OFF (sufficient DO)");
+      }
+    }
   }
 
-  // pH control
-  if (phLevel < phMin) {
-    valve->turnOn();
-    Serial.println("Auto: Valve ON (low pH)");
-  } else if (phLevel > phMax) {
-    valve->turnOn();
-    Serial.println("Auto: Valve ON (high pH)");
+  // pH control - NOTE: This assumes valve is for pH adjustment
+  // If you have separate valves for acid/base, modify this logic
+  static bool valveAutoState = false;
+  if (phLevel < phMin || phLevel > phMax) {
+    if (!valveAutoState && valve) {
+      valve->turnOn();
+      valveAutoState = true;
+      if (LOG_LEVEL >= 1) {
+        Serial.print("Auto: Valve ON (pH out of range: ");
+        Serial.print(phLevel);
+        Serial.println(")");
+      }
+    }
   } else {
-    valve->turnOff();
-    Serial.println("Auto: pH OK");
+    if (valveAutoState && valve) {
+      valve->turnOff();
+      valveAutoState = false;
+      if (LOG_LEVEL >= 2) {
+        Serial.println("Auto: pH OK");
+      }
+    }
   }
-
-  // Note: Light level is typically for monitoring, not control
-  // But you can add LED control here if needed
 }
 

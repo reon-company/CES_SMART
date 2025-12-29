@@ -41,19 +41,37 @@ private:
 
 public:
   WiFiConfig() {
-    // Arduino R4 WiFi EEPROM은 begin() 없이 바로 사용 가능
-    loadFromEEPROM();
+    // Constructor runs before setup() - must be safe
+    // Initialize to safe defaults first (no EEPROM access in constructor)
+    configured = false;
+    ssid = "";
+    password = "";
+    
+    // NOTE: EEPROM access moved to loadFromEEPROM() which is called
+    // explicitly in setup() after Serial is ready
+    // This prevents constructor from blocking or failing
   }
   
-  // EEPROM에서 설정 로드
+  // EEPROM에서 설정 로드 (setup()에서 호출)
   void loadFromEEPROM() {
-    configured = EEPROM.read(EEPROM_CONFIGURED_ADDR) == 1;
+    // Safe EEPROM read
+    configured = false;
+    ssid = "";
+    password = "";
+    
+    // Read configuration flag
+    uint8_t configFlag = EEPROM.read(EEPROM_CONFIGURED_ADDR);
+    configured = (configFlag == 1);
+    
     if (configured) {
       ssid = readStringFromEEPROM(EEPROM_SSID_ADDR, 64);
       password = readStringFromEEPROM(EEPROM_PASSWORD_ADDR, 64);
-    } else {
-      ssid = "";
-      password = "";
+      
+      // Validate: if SSID is empty, treat as not configured
+      if (ssid.length() == 0) {
+        configured = false;
+        password = "";
+      }
     }
   }
   
@@ -64,7 +82,7 @@ public:
     writeStringToEEPROM(EEPROM_SSID_ADDR, ssid, 64);
     writeStringToEEPROM(EEPROM_PASSWORD_ADDR, password, 64);
     EEPROM.write(EEPROM_CONFIGURED_ADDR, 1);
-    // Arduino R4 WiFi EEPROM은 commit() 없이 즉시 저장됨
+    // Arduino R4에서는 commit()이 필요 없음 (자동 저장됨)
     configured = true;
   }
   
@@ -74,35 +92,150 @@ public:
     ssid = "";
     password = "";
     EEPROM.write(EEPROM_CONFIGURED_ADDR, 0);
-    // Arduino R4 WiFi EEPROM은 commit() 없이 즉시 저장됨
+    // Arduino R4에서는 commit()이 필요 없음 (자동 저장됨)
   }
   
   String getSSID() { return ssid; }
   String getPassword() { return password; }
   bool isConfigured() { return configured; }
   
+  // WiFi 상태 코드를 문자열로 변환
+  String getWiFiStatusString(int status) {
+    switch (status) {
+      case WL_IDLE_STATUS:      return "WL_IDLE_STATUS (대기 중)";
+      case WL_NO_SSID_AVAIL:     return "WL_NO_SSID_AVAIL (SSID 없음)";
+      case WL_SCAN_COMPLETED:    return "WL_SCAN_COMPLETED (스캔 완료)";
+      case WL_CONNECTED:         return "WL_CONNECTED (연결됨)";
+      case WL_CONNECT_FAILED:    return "WL_CONNECT_FAILED (연결 실패)";
+      case WL_CONNECTION_LOST:   return "WL_CONNECTION_LOST (연결 끊김)";
+      case WL_DISCONNECTED:      return "WL_DISCONNECTED (연결 해제됨)";
+      case WL_AP_LISTENING:      return "WL_AP_LISTENING (AP 모드 대기 중)";
+      case WL_AP_CONNECTED:      return "WL_AP_CONNECTED (AP 모드 연결됨)";
+      case WL_AP_FAILED:         return "WL_AP_FAILED (AP 모드 실패)";
+      default:                   return "알 수 없는 상태 (" + String(status) + ")";
+    }
+  }
+  
   // WiFi AP 모드로 설정 페이지 시작
   void startConfigPortal() {
-    Serial.println("Starting WiFi Configuration Portal...");
+    Serial.println();
+    Serial.println("========================================");
+    Serial.println("🌐 WiFi Configuration Portal 시작");
+    Serial.println("========================================");
     
-    // AP 모드로 시작
-    WiFi.beginAP("CES_SmartFarm_Setup");
-    IPAddress apIP(192, 168, 4, 1);
-    WiFi.config(apIP);
+    // 현재 WiFi 상태 확인
+    Serial.print("현재 WiFi 상태: ");
+    int currentStatus = WiFi.status();
+    Serial.println(getWiFiStatusString(currentStatus));
     
-    Serial.print("AP IP address: ");
-    Serial.println(WiFi.localIP());
-    Serial.println("Connect to WiFi: CES_SmartFarm_Setup");
-    Serial.println("Then open browser: http://192.168.4.1");
+    // 기존 WiFi 연결 종료
+    if (currentStatus == WL_CONNECTED) {
+      Serial.println("기존 WiFi 연결 종료 중...");
+      WiFi.disconnect();
+      delay(500);
+      Serial.print("연결 종료 후 상태: ");
+      Serial.println(getWiFiStatusString(WiFi.status()));
+    }
+    
+    Serial.println();
+    Serial.println("AP 모드로 전환 시도 중...");
+    Serial.print("AP 이름: CES_SmartFarm_Setup");
+    Serial.println();
+    
+    // AP 모드로 시작 (Arduino R4 WiFi)
+    int status = WiFi.beginAP("CES_SmartFarm_Setup");
+    
+    Serial.print("beginAP() 반환값: ");
+    Serial.println(status);
+    Serial.print("상태 설명: ");
+    Serial.println(getWiFiStatusString(status));
+    
+    // 상태 확인을 위해 잠시 대기
+    delay(2000);
+    
+    // 다시 상태 확인
+    int newStatus = WiFi.status();
+    Serial.print("2초 후 WiFi 상태: ");
+    Serial.println(getWiFiStatusString(newStatus));
+    
+    if (newStatus != WL_AP_LISTENING && newStatus != WL_AP_CONNECTED) {
+      Serial.println();
+      Serial.println("❌ AP 모드 시작 실패!");
+      Serial.print("상태 코드: ");
+      Serial.println(newStatus);
+      Serial.println("가능한 원인:");
+      Serial.println("  1. WiFi 모듈 초기화 실패");
+      Serial.println("  2. 하드웨어 문제");
+      Serial.println("  3. 보드 리셋 필요");
+      Serial.println();
+      Serial.println("보드를 리셋하고 다시 시도하세요.");
+      delay(5000);
+      return;
+    }
+    
+    // AP IP 주소 확인
+    delay(1000); // AP 모드 초기화 대기
+    IPAddress apIP = WiFi.localIP();
+    
+    Serial.println();
+    Serial.println("========================================");
+    Serial.println("✅ AP 모드 시작 성공!");
+    Serial.println("========================================");
+    Serial.print("AP IP 주소: ");
+    Serial.println(apIP);
+    Serial.print("AP MAC 주소: ");
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    Serial.print(mac[0], HEX);
+    for (int i = 1; i < 6; i++) {
+      Serial.print(":");
+      if (mac[i] < 16) Serial.print("0");
+      Serial.print(mac[i], HEX);
+    }
+    Serial.println();
+    Serial.println("========================================");
+    Serial.println();
+    Serial.println("📱 스마트폰이나 컴퓨터에서 다음 WiFi에 연결하세요:");
+    Serial.println("   WiFi 이름: CES_SmartFarm_Setup");
+    Serial.println("   비밀번호: 없음");
+    Serial.println();
+    Serial.print("🌐 그 다음 브라우저에서 다음 주소로 접속하세요: ");
+    Serial.print("http://");
+    Serial.println(apIP);
+    Serial.println();
+    Serial.println("⏳ 클라이언트 연결 대기 중...");
+    Serial.println("========================================");
     
     // 간단한 웹 서버 시작
     WiFiServer server(80);
     server.begin();
+    Serial.println("웹 서버 시작됨 (포트 80)");
+    Serial.println();
+    
+    unsigned long lastStatusCheck = 0;
     
     while (true) {
+      // 5초마다 AP 상태 확인
+      if (millis() - lastStatusCheck > 5000) {
+        lastStatusCheck = millis();
+        int apStatus = WiFi.status();
+        Serial.print("[");
+        Serial.print(millis() / 1000);
+        Serial.print("초] AP 상태: ");
+        Serial.println(getWiFiStatusString(apStatus));
+        Serial.print("   AP IP: ");
+        Serial.println(WiFi.localIP());
+        Serial.println("   클라이언트 연결 대기 중...");
+      }
+      
       WiFiClient client = server.available();
       if (client) {
-        Serial.println("New client connected");
+        Serial.println();
+        Serial.println("========================================");
+        Serial.println("✅ 새 클라이언트 연결됨!");
+        Serial.print("클라이언트 IP: ");
+        Serial.println(client.remoteIP());
+        Serial.println("========================================");
         String request = "";
         
         while (client.connected()) {
@@ -182,8 +315,15 @@ public:
             // 설정 저장
             save(newSSID, newPassword);
             
-            Serial.print("WiFi 설정 저장됨: ");
+            Serial.println();
+            Serial.println("========================================");
+            Serial.println("✅ WiFi 설정 저장 완료!");
+            Serial.print("저장된 SSID: ");
             Serial.println(newSSID);
+            Serial.println("========================================");
+            Serial.println();
+            Serial.println("아두이노를 재시작하면 저장된 WiFi에 연결됩니다.");
+            Serial.println("3초 후 재시작합니다...");
             
             // 성공 페이지
             client.println("HTTP/1.1 200 OK");
@@ -199,7 +339,10 @@ public:
             client.println("<p>아두이노를 재시작하면 WiFi에 연결됩니다.</p>");
             client.println("</body></html>");
             
-            delay(2000);
+            delay(3000);
+            // 아두이노 재시작 (ESP32 스타일이지만 R4에서는 작동하지 않을 수 있음)
+            // 대신 loop()로 돌아가서 연결 시도
+            Serial.println("설정 포털 종료. WiFi 연결 시도...");
             return; // 설정 완료, 루프 종료
           }
         }
@@ -211,66 +354,98 @@ public:
     }
   }
   
-  // WiFi 연결 시도 (EEPROM에서 로드한 정보 사용)
+  // WiFi 연결 시도
   bool connect() {
+    // 설정이 없으면 설정 포털 시작
     if (!configured || ssid.length() == 0) {
-      Serial.println("WiFi 설정이 없습니다.");
+      Serial.println("EEPROM에 WiFi 설정이 없습니다.");
+      Serial.println("설정 포털을 시작합니다...");
+      startConfigPortal();
       return false;
     }
     
-    return connect(ssid, password);
-  }
-  
-  // WiFi 연결 시도 (SSID와 Password 직접 지정, 재시도 로직 개선)
-  bool connect(String wifiSSID, String wifiPassword, int maxAttempts = 3) {
-    if (wifiSSID.length() == 0 || wifiPassword.length() == 0) {
-      Serial.println("WiFi SSID or password is empty!");
-      return false;
-    }
-    
-    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-      Serial.print("WiFi에 연결 시도 중 (");
-      Serial.print(attempt);
-      Serial.print("/");
-      Serial.print(maxAttempts);
-      Serial.print("): ");
-      Serial.println(wifiSSID);
-      
-      // 이전 연결 정리
+    // 기존 연결이 있으면 먼저 끊기
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("기존 WiFi 연결 종료 중...");
       WiFi.disconnect();
       delay(500);
+    }
+    
+    Serial.println("========================================");
+    Serial.print("WiFi에 연결 시도 중: ");
+    Serial.println(ssid);
+    Serial.println("========================================");
+    
+    // WiFi 연결 시작
+    int status = WiFi.begin(ssid.c_str(), password.c_str());
+    
+    if (status == WL_NO_SSID_AVAIL) {
+      Serial.println("오류: WiFi 네트워크를 찾을 수 없습니다.");
+      return false;
+    }
+    
+    // 연결 대기 (최대 30초)
+    int attempts = 0;
+    int maxAttempts = 60; // 30초 (500ms * 60)
+    
+    while (WiFi.status() != WL_CONNECTED && attempts < maxAttempts) {
+      delay(500);
+      Serial.print(".");
+      attempts++;
       
-      WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
-      
-      int waitAttempts = 0;
-      while (WiFi.status() != WL_CONNECTED && waitAttempts < 30) {
-        delay(500);
-        Serial.print(".");
-        waitAttempts++;
-      }
-      
-      if (WiFi.status() == WL_CONNECTED) {
-        Serial.println();
-        Serial.print("✅ WiFi 연결 성공! IP 주소: ");
-        Serial.println(WiFi.localIP());
-        Serial.print("신호 강도 (RSSI): ");
-        Serial.print(WiFi.RSSI());
-        Serial.println(" dBm");
-        return true;
-      } else {
-        Serial.println();
-        Serial.print("❌ 연결 실패");
-        if (attempt < maxAttempts) {
-          Serial.print(" - ");
-          Serial.print((attempt + 1) * 2);
-          Serial.println("초 후 재시도...");
-          delay((attempt + 1) * 2000); // 지수 백오프
-        }
+      // 5초마다 상태 출력
+      if (attempts % 10 == 0) {
+        Serial.print(" (");
+        Serial.print(attempts * 500 / 1000);
+        Serial.println("초 경과)");
       }
     }
     
-    Serial.println("모든 연결 시도 실패.");
-    return false;
+    Serial.println();
+    
+    // 연결 결과 확인
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("========================================");
+      Serial.println("✅ WiFi 연결 성공!");
+      Serial.print("IP 주소: ");
+      Serial.println(WiFi.localIP());
+      Serial.print("신호 강도 (RSSI): ");
+      Serial.print(WiFi.RSSI());
+      Serial.println(" dBm");
+      Serial.println("========================================");
+      return true;
+    } else {
+      Serial.println("========================================");
+      Serial.println("❌ WiFi 연결 실패!");
+      Serial.print("상태 코드: ");
+      Serial.println(WiFi.status());
+      Serial.println("========================================");
+      Serial.println("가능한 원인:");
+      Serial.println("  1. WiFi SSID 또는 비밀번호가 잘못되었습니다");
+      Serial.println("  2. WiFi 신호가 약합니다");
+      Serial.println("  3. WiFi 라우터가 응답하지 않습니다");
+      Serial.println();
+      Serial.println("설정 포털을 시작합니다...");
+      delay(2000);
+      startConfigPortal();
+      return false;
+    }
+  }
+  
+  // WiFi 재연결 시도 (loop에서 사용)
+  bool reconnect() {
+    if (!configured || ssid.length() == 0) {
+      return false;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+      return true; // 이미 연결됨
+    }
+    
+    Serial.println("WiFi 재연결 시도 중...");
+    WiFi.disconnect();
+    delay(1000);
+    return connect();
   }
 };
 

@@ -69,7 +69,7 @@ async function apiRequest(endpoint, options = {}) {
                     response: {
                         status: 0,
                         data: { 
-                            message: 'SSL 인증서 오류: 브라우저에서 "고급" → "54.180.237.225(으)로 이동"을 클릭하여 인증서를 허용해주세요.',
+                            message: 'SSL 인증서 오류: 브라우저에서 "고급" → "CES-smart.reonaicoffee.com(으)로 이동"을 클릭하여 인증서를 허용해주세요.',
                             sslError: true
                         }
                     }

@@ -2,8 +2,9 @@
 
 ## 새로운 서버 정보
 
-- **새 IP 주소**: 54.180.237.225
-- **이전 IP 주소**: 54.180.160.232
+- **새 IP 주소**: 43.203.141.2
+- **새 API 도메인**: https://CES-smart.reonaicoffee.com
+- **이전 IP 주소**: 54.180.237.225
 
 ## 업데이트 필요 사항
 
@@ -12,7 +13,7 @@
 서버에 접속하여 `.env` 파일 수정:
 
 ```bash
-ssh -i LightsailDefaultKey-ap-northeast-2.pem ubuntu@54.180.237.225
+ssh -i LightsailDefaultKey-ap-northeast-2.pem ubuntu@43.203.141.2
 cd ~/ces-smartfarm/backend
 nano .env
 ```
@@ -24,9 +25,10 @@ CORS_ORIGIN=http://localhost:8080,https://ces-smart.vercel.app
 
 ### 2. 프론트엔드 API 설정
 
-이미 업데이트됨:
-- `frontend/public/js/api.js`: `http://54.180.237.225:3000`
-- `frontend/lib/api.js`: `http://54.180.237.225:3000`
+업데이트 필요:
+- `frontend/public/js/api.js`: `https://CES-smart.reonaicoffee.com`
+- `frontend/lib/api.js`: `https://CES-smart.reonaicoffee.com`
+- `frontend/public/module.html`: `https://CES-smart.reonaicoffee.com`
 
 ### 3. HTTPS 설정 (Nginx)
 
@@ -41,15 +43,15 @@ sudo rm /etc/ssl/private/ces-api.key
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout /etc/ssl/private/ces-api.key \
   -out /etc/ssl/certs/ces-api.crt \
-  -subj "/C=KR/ST=Seoul/L=Seoul/O=CES/CN=54.180.237.225"
+  -subj "/C=KR/ST=Seoul/L=Seoul/O=CES/CN=CES-smart.reonaicoffee.com"
 
 # Nginx 설정 파일 업데이트
 sudo nano /etc/nginx/sites-available/ces-api
 ```
 
-`server_name`을 새 IP로 변경:
+`server_name`을 새 도메인으로 변경:
 ```nginx
-server_name 54.180.237.225;
+server_name CES-smart.reonaicoffee.com;
 ```
 
 ```bash
@@ -66,11 +68,11 @@ AWS Lightsail 콘솔에서:
 ### 5. 서버 상태 확인
 
 ```bash
-# Health check
-curl http://54.180.237.225:3000/api/health
+# Health check (HTTP - 내부 테스트용)
+curl http://43.203.141.2:3000/api/health
 
-# HTTPS (설정한 경우)
-curl -k https://54.180.237.225/api/health
+# HTTPS (프로덕션)
+curl https://CES-smart.reonaicoffee.com/api/health
 ```
 
 ## 프론트엔드 재배포
@@ -79,10 +81,16 @@ curl -k https://54.180.237.225/api/health
 
 ```bash
 cd frontend
-git add public/js/api.js lib/api.js
-git commit -m "Update API server IP to 54.180.237.225"
+git add public/js/api.js lib/api.js public/module.html
+git commit -m "Update API server to https://CES-smart.reonaicoffee.com"
 git push
 ```
+
+### 4. 아두이노 설정
+
+아두이노는 HTTPS를 지원하지 않으므로 HTTP로 접근:
+- `arduino-r4/CES_SmartFarm/config.h`의 `API_BASE_URL`을 `http://43.203.141.2:3000`으로 설정
+- 또는 도메인 사용 시: `http://CES-smart.reonaicoffee.com` (HTTP 포트 80 또는 3000)
 
 Vercel이 자동으로 재배포합니다.
 

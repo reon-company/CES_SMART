@@ -148,7 +148,10 @@ CES_SmartFarm/
 
 ```cpp
 // API Configuration
-#define API_BASE_URL "http://3.36.109.155:3000"  // 서버 주소 변경 필요
+// Arduino는 HTTPS를 지원하지 않으므로 HTTP 사용
+#define API_BASE_URL "http://43.203.141.2:3000"  // 서버 IP 주소
+// 또는 도메인 사용 시 (HTTP 포트 필요):
+// #define API_BASE_URL "http://CES-smart.reonaicoffee.com:3000"
 
 // Module Configuration
 #define MODULE_ID "MODULE_001"  // 각 모듈마다 고유 ID로 변경

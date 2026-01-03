@@ -7,9 +7,56 @@ const { actuatorControlValidation, validate } = require('../utils/validation');
 const router = express.Router();
 
 // @route   GET /api/actuators/status/:moduleId
-// @desc    Get actuator status for a module
+// @desc    Get actuator status for a module (Public - for Arduino)
+// @access  Public (아두이노에서 직접 호출)
+router.get('/status/:moduleId', async (req, res) => {
+  try {
+    const { moduleId } = req.params;
+
+    // Verify module exists (no auth required for Arduino)
+    const module = await Module.findByModuleId(moduleId);
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found'
+      });
+    }
+
+    const status = await ActuatorStatus.findByModuleId(moduleId);
+
+    if (!status) {
+      // Return default status if not found
+      return res.json({
+        success: true,
+        status: {
+          module_id: moduleId,
+          water_pump: false,
+          air_pump: false,
+          valve: false,
+          heater: false,
+          cooler: false,
+          relay: false
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      status
+    });
+  } catch (error) {
+    console.error('Get actuator status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   GET /api/actuators/:moduleId
+// @desc    Get actuator status for a module (Private - for web dashboard)
 // @access  Private
-router.get('/status/:moduleId', auth, async (req, res) => {
+router.get('/:moduleId', auth, async (req, res) => {
   try {
     const { moduleId } = req.params;
 

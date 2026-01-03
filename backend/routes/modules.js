@@ -82,13 +82,14 @@ router.post('/', auth, moduleValidation, validate, async (req, res) => {
     // Create module
     const moduleId = await Module.create(req.user.id, name, module_id, wifi_ssid, wifi_password);
 
-    // Initialize actuator status
+    // Initialize actuator status (all actuators OFF)
     await ActuatorStatus.createOrUpdate(module_id, {
       water_pump: false,
       air_pump: false,
       valve: false,
       heater: false,
-      cooler: false
+      cooler: false,
+      relay: false
     });
 
     const module = await Module.findById(moduleId, req.user.id);

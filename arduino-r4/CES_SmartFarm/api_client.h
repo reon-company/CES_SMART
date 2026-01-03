@@ -172,7 +172,7 @@ public:
     }
 
     // Parse JSON response
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<300> doc;
     DeserializationError error = deserializeJson(doc, response);
     
     if (error) {
@@ -182,15 +182,18 @@ public:
       return false;
     }
     
-    // Try different possible field names
-    if (doc.containsKey("relay")) {
+    // Server returns: { "success": true, "status": { "relay": true/false, ... } }
+    if (doc.containsKey("status")) {
+      JsonObject statusObj = doc["status"];
+      if (statusObj.containsKey("relay")) {
+        relayState = statusObj["relay"] | false;
+      } else {
+        relayState = false;
+      }
+    } else if (doc.containsKey("relay")) {
+      // Direct relay field (fallback)
       relayState = doc["relay"] | false;
-    } else if (doc.containsKey("relay_state")) {
-      relayState = doc["relay_state"] | false;
-    } else if (doc.containsKey("state")) {
-      relayState = doc["state"] | false;
     } else {
-      // Default: try first boolean field
       relayState = false;
     }
 

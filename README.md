@@ -22,22 +22,36 @@
 
 ### 하드웨어
 
-- **아두이노 R4**: 센서 데이터 수집 및 액추에이터 제어
-- \*\*아두이노 R4의 wifi 세팅
-  -
-- **센서**:
-  현재 개발 단계에서는
-  - 워터 레벨 센서 (아날로그)
-  - DS18B20 온도 센서
-  - DO 센서 (SEN0237-A, 0-3V)
-  - pH 센서
-  - Grove Light Sensor v1.2
-- **액추에이터** (릴레이 모듈):
-  - Water Pump
-  - Air Pump
-  - Actuator Valve (pH 조절용)
-  - Heater
-  - Cooler
+- **아두이노 R4 WiFi**: 센서 데이터 수집 및 액추에이터 제어
+- **WiFi 설정**: AP 모드 웹 포털을 통한 EEPROM 저장 방식
+
+#### 현재 테스트 버전 (v1.1.0)
+
+**센서**:
+
+- ✅ DHT11 온도/습도 센서
+
+**액추에이터**:
+
+- ✅ 1채널 릴레이 모듈 [SZH-EK082]
+
+#### 전체 구성 (향후 확장 예정)
+
+**센서**:
+
+- 워터 레벨 센서 (아날로그)
+- DS18B20 온도 센서
+- DO 센서 (SEN0237-A, 0-3V)
+- pH 센서
+- Grove Light Sensor v1.2
+
+**액추에이터** (릴레이 모듈):
+
+- Water Pump
+- Air Pump
+- Actuator Valve (pH 조절용)
+- Heater
+- Cooler
 
 ### 소프트웨어
 
@@ -187,20 +201,35 @@ vercel --prod
 
 ### 센서 모니터링
 
+**현재 테스트 버전**:
+
+- ✅ 온도: 섭씨 온도 (DHT11)
+- ✅ 습도: 0-100% (DHT11)
+- **데이터 업데이트 주기**: 30초마다 자동 업데이트
+
+**전체 버전 (향후 확장)**:
+
 - 워터 레벨: 0-100%
 - 온도: 섭씨 온도
 - 용존산소 (DO): mg/L
 - pH: 0-14
 - 조도: 0-100%
-- **데이터 업데이트 주기**: 30초마다 자동 업데이트
 
-### 자동 제어
+### 제어 방식
 
-- 워터 레벨이 낮으면 워터 펌프 자동 작동
-- 온도가 범위를 벗어나면 히터/쿨러 자동 제어
-- DO가 낮으면 에어 펌프 자동 작동
-- pH가 범위를 벗어나면 액추에이터 밸브 제어
-- 조도에 따른 LED 제어
+**현재 구현**:
+
+- ✅ 서버 기반 원격 제어 (웹 대시보드에서 수동 제어)
+- ✅ 릴레이 모듈 제어
+
+**향후 확장 예정**:
+
+- 자동 제어 (임계값 기반)
+  - 워터 레벨이 낮으면 워터 펌프 자동 작동
+  - 온도가 범위를 벗어나면 히터/쿨러 자동 제어
+  - DO가 낮으면 에어 펌프 자동 작동
+  - pH가 범위를 벗어나면 액추에이터 밸브 제어
+  - 조도에 따른 LED 제어
 
 ### 웹 대시보드
 
@@ -236,9 +265,11 @@ vercel --prod
 
 ### 액추에이터
 
-- `GET /api/actuators/status/:moduleId`: 특정 모듈의 액추에이터 상태 조회
-- `POST /api/actuators/control/:moduleId`: 특정 모듈의 액추에이터 제어
-- `POST /api/actuators/status/update/:moduleId`: 액추에이터 상태 업데이트
+- `GET /api/actuators/status/:moduleId`: 특정 모듈의 액추에이터 상태 조회 (Public - 아두이노용)
+- `GET /api/actuators/:moduleId`: 특정 모듈의 액추에이터 상태 조회 (Private - 웹 대시보드용)
+- `POST /api/actuators/:moduleId/:actuatorType`: 특정 모듈의 액추에이터 제어 (Private)
+- `POST /api/actuators/control/:moduleId`: 특정 모듈의 액추에이터 제어 (Private - 레거시)
+- `POST /api/actuators/status/update/:moduleId`: 액추에이터 상태 업데이트 (Public - 아두이노용)
 
 ### 설정
 

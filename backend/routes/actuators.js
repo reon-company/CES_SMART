@@ -6,12 +6,19 @@ const { actuatorControlValidation, validate } = require('../utils/validation');
 
 const router = express.Router();
 
+// IMPORTANT: More specific routes must come BEFORE less specific routes
+// /status/:moduleId must come before /:moduleId
+
 // @route   GET /api/actuators/status/:moduleId
 // @desc    Get actuator status for a module (Public - for Arduino)
 // @access  Public (아두이노에서 직접 호출)
+// This route MUST be defined before /:moduleId to avoid route matching issues
 router.get('/status/:moduleId', async (req, res) => {
   try {
     const { moduleId } = req.params;
+    
+    // Debug logging
+    console.log(`[PUBLIC] GET /api/actuators/status/${moduleId} - No auth required`);
 
     // Verify module exists (no auth required for Arduino)
     const module = await Module.findByModuleId(moduleId);
@@ -59,6 +66,9 @@ router.get('/status/:moduleId', async (req, res) => {
 router.get('/:moduleId', auth, async (req, res) => {
   try {
     const { moduleId } = req.params;
+    
+    // Debug logging
+    console.log(`[PRIVATE] GET /api/actuators/${moduleId} - Auth required`);
 
     // Verify module belongs to user
     const module = await Module.findByModuleId(moduleId);

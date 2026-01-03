@@ -170,6 +170,11 @@ public:
 
     String endpoint = String(API_ACTUATORS_STATUS_ENDPOINT) + "/" + String(MODULE_ID);
     
+    if (LOG_LEVEL >= 1) {
+      Serial.print("Requesting relay status from: ");
+      Serial.println(endpoint);
+    }
+    
     // Connect to server
     if (!client.connect(host.c_str(), port)) {
       Serial.println("Connection to server failed!");
@@ -220,7 +225,7 @@ public:
       }
     }
 
-    // Check if response is empty (404 or other errors)
+    // Check if response is empty (404, 401 or other errors)
     if (response.length() == 0) {
       Serial.print("Empty response (HTTP ");
       Serial.print(statusCode);
@@ -229,6 +234,9 @@ public:
         Serial.println("ERROR: Module not found! Please register module in web dashboard.");
         Serial.print("Current MODULE_ID: ");
         Serial.println(MODULE_ID);
+      } else if (statusCode == 401) {
+        Serial.println("ERROR: Unauthorized (401). Server may need restart.");
+        Serial.println("This endpoint should be Public. Check server code.");
       }
       client.stop();
       return false;
@@ -258,6 +266,18 @@ public:
         Serial.print("Server error: ");
         Serial.println(doc["message"].as<String>());
       }
+      if (statusCode == 401) {
+        Serial.println("ERROR: 401 Unauthorized - Server may need restart");
+        Serial.println("Contact server administrator to restart backend.");
+      }
+      client.stop();
+      return false;
+    }
+    
+    // Check HTTP status code
+    if (statusCode == 401) {
+      Serial.println("ERROR: 401 Unauthorized - This endpoint should be Public");
+      Serial.println("Server may be using old code. Please restart server.");
       client.stop();
       return false;
     }

@@ -136,6 +136,7 @@
         }
 
         let module = null;
+        let moduleModuleId = null; // module_id (예: MODULE_001)
         let sensorUpdateInterval = null;
         let relayUpdateInterval = null;
 
@@ -150,84 +151,191 @@
 
         async function loadModule() {
             try {
+                console.log('Loading module with database ID:', moduleId);
                 const response = await modulesAPI.getById(moduleId);
                 module = response.module || response;
                 
+                console.log('Module loaded:', module);
+                
+                // module_id 저장 (센서 데이터 및 액추에이터 조회에 사용)
+                moduleModuleId = module.module_id;
+                
+                if (!moduleModuleId) {
+                    throw new Error('Module ID not found in module data');
+                }
+                
                 document.getElementById('moduleName').textContent = module.name || '모듈';
-                document.getElementById('moduleMac').textContent = `Module ID: ${module.module_id || 'N/A'}`;
+                document.getElementById('moduleMac').textContent = `Module ID: ${moduleModuleId}`;
+                
+                // 모듈 정보 로드 후 센서 데이터와 릴레이 상태 로드
+                loadSensorData();
+                loadRelayStatus();
             } catch (err) {
                 console.error('모듈 정보 로드 실패:', err);
-                alert('모듈 정보를 불러오는데 실패했습니다.');
+                console.error('Error details:', err.response || err);
+                alert('모듈 정보를 불러오는데 실패했습니다: ' + (err.response?.data?.message || err.message));
                 window.location.href = 'dashboard.html';
             }
         }
 
         async function loadSensorData() {
+            // module_id가 없으면 대기
+            if (!moduleModuleId) {
+                console.log('Waiting for module_id...');
+                return;
+            }
+            
             try {
-                // Use latest endpoint
                 const token = auth.getToken();
-                const response = await fetch(`${API_BASE_URL}/api/sensors/latest/${moduleId}`, {
+                if (!token) {
+                    console.error('No authentication token');
+                    return;
+                }
+                
+                console.log('Loading sensor data for module_id:', moduleModuleId);
+                const response = await fetch(`${API_BASE_URL}/api/sensors/latest/${moduleModuleId}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
                 });
                 
+                console.log('Sensor data response status:', response.status);
+                
                 if (!response.ok) {
-                    throw new Error('센서 데이터를 불러올 수 없습니다.');
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Sensor data error:', errorData);
+                    
+                    // 404는 데이터가 없는 경우이므로 정상
+                    if (response.status === 404) {
+                        document.getElementById('temperature').textContent = '--';
+                        document.getElementById('humidity').textContent = '--';
+                        document.getElementById('lastUpdate').textContent = '데이터 없음';
+                        return;
+                    }
+                    
+                    throw new Error(errorData.message || '센서 데이터를 불러올 수 없습니다.');
                 }
                 
                 const result = await response.json();
+                console.log('Sensor data result:', result);
+                
                 const data = result.data || result;
                 
                 // DHT11 데이터 (온도, 습도)
-                if (data.temperature !== undefined) {
-                    document.getElementById('temperature').textContent = data.temperature.toFixed(1);
+                if (data.temperature !== null && data.temperature !== undefined) {
+                    document.getElementById('temperature').textContent = parseFloat(data.temperature).toFixed(1);
+                } else {
+                    document.getElementById('temperature').textContent = '--';
                 }
-                if (data.humidity !== undefined) {
-                    document.getElementById('humidity').textContent = data.humidity.toFixed(1);
+                
+                if (data.humidity !== null && data.humidity !== undefined) {
+                    document.getElementById('humidity').textContent = parseFloat(data.humidity).toFixed(1);
+                } else {
+                    document.getElementById('humidity').textContent = '--';
                 }
                 
                 // 마지막 업데이트 시간
-                const now = new Date();
-                document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('ko-KR');
+                if (data.created_at) {
+                    const updateTime = new Date(data.created_at);
+                    document.getElementById('lastUpdate').textContent = updateTime.toLocaleTimeString('ko-KR');
+                } else {
+                    const now = new Date();
+                    document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('ko-KR');
+                }
             } catch (err) {
                 console.error('센서 데이터 로드 실패:', err);
+                console.error('Error details:', err.response || err);
                 document.getElementById('temperature').textContent = '--';
                 document.getElementById('humidity').textContent = '--';
+                document.getElementById('lastUpdate').textContent = '오류';
             }
         }
 
         async function loadRelayStatus() {
+            // module_id가 없으면 대기
+            if (!moduleModuleId) {
+                console.log('Waiting for module_id...');
+                return;
+            }
+            
             try {
-                const response = await actuatorsAPI.getStatus(moduleId);
-                const status = response.status || response;
+                console.log('Loading relay status for module_id:', moduleModuleId);
+                
+                // module_id를 사용하여 액추에이터 상태 조회
+                const token = auth.getToken();
+                if (!token) {
+                    console.error('No authentication token');
+                    return;
+                }
+                
+                // module_id를 사용하여 직접 API 호출
+                const response = await fetch(`${API_BASE_URL}/api/actuators/${moduleModuleId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Relay status response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Relay status error:', errorData);
+                    throw new Error(errorData.message || '릴레이 상태를 불러올 수 없습니다.');
+                }
+                
+                const result = await response.json();
+                console.log('Relay status result:', result);
+                
+                const status = result.status || result;
                 
                 // 릴레이 상태 확인 (여러 가능한 필드명 시도)
                 let relayState = false;
                 if (status.relay !== undefined) {
-                    relayState = status.relay;
+                    relayState = Boolean(status.relay);
                 } else if (status.relay_state !== undefined) {
-                    relayState = status.relay_state;
+                    relayState = Boolean(status.relay_state);
                 } else if (status.state !== undefined) {
-                    relayState = status.state;
+                    relayState = Boolean(status.state);
                 }
+                
+                console.log('Relay state:', relayState);
                 
                 // 스위치 상태 업데이트
                 const switchElement = document.getElementById('relaySwitch');
-                switchElement.checked = relayState;
+                if (switchElement) {
+                    switchElement.checked = relayState;
+                }
                 
                 // 상태 표시 업데이트
-                document.getElementById('relayStatus').textContent = relayState ? 'ON' : 'OFF';
-                document.getElementById('relayStatus').className = relayState ? 'font-bold text-green-600' : 'font-bold text-gray-600';
-                document.getElementById('relayLabel').textContent = relayState ? 'ON' : 'OFF';
+                const statusElement = document.getElementById('relayStatus');
+                if (statusElement) {
+                    statusElement.textContent = relayState ? 'ON' : 'OFF';
+                    statusElement.className = relayState ? 'font-bold text-green-600' : 'font-bold text-gray-600';
+                }
+                
+                const labelElement = document.getElementById('relayLabel');
+                if (labelElement) {
+                    labelElement.textContent = relayState ? 'ON' : 'OFF';
+                }
             } catch (err) {
                 console.error('릴레이 상태 로드 실패:', err);
-                document.getElementById('relayStatus').textContent = '오류';
+                console.error('Error details:', err.response || err);
+                const statusElement = document.getElementById('relayStatus');
+                if (statusElement) {
+                    statusElement.textContent = '오류';
+                    statusElement.className = 'font-bold text-red-600';
+                }
             }
         }
 
         async function toggleRelay() {
+            if (!moduleModuleId) {
+                alert('모듈 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            
             const switchElement = document.getElementById('relaySwitch');
             const newState = switchElement.checked;
             const messageDiv = document.getElementById('relayMessage');
@@ -236,8 +344,24 @@
             messageDiv.className = 'mt-4 text-sm text-blue-600';
             
             try {
-                // 릴레이 제어 API 호출
-                const response = await actuatorsAPI.control(moduleId, 'relay', newState ? 'on' : 'off');
+                // module_id를 사용하여 릴레이 제어 API 호출
+                const token = auth.getToken();
+                const response = await fetch(`${API_BASE_URL}/api/actuators/${moduleModuleId}/relay`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: newState ? 'on' : 'off' })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || '릴레이 제어에 실패했습니다.');
+                }
+                
+                const result = await response.json();
+                console.log('Relay control result:', result);
                 
                 messageDiv.textContent = newState ? '릴레이가 켜졌습니다.' : '릴레이가 꺼졌습니다.';
                 messageDiv.className = 'mt-4 text-sm text-green-600';
@@ -253,22 +377,20 @@
                 }, 3000);
             } catch (err) {
                 console.error('릴레이 제어 실패:', err);
-                messageDiv.textContent = err.response?.data?.message || '릴레이 제어에 실패했습니다.';
+                messageDiv.textContent = err.message || '릴레이 제어에 실패했습니다.';
                 messageDiv.className = 'mt-4 text-sm text-red-600';
                 
                 // 스위치 되돌리기
                 switchElement.checked = !newState;
                 
                 // 상태 다시 로드
-                loadRelayStatus();
+                setTimeout(loadRelayStatus, 1000);
             }
         }
 
         // 초기 로드
         loadUserInfo();
-        loadModule();
-        loadSensorData();
-        loadRelayStatus();
+        loadModule(); // loadModule 내부에서 loadSensorData와 loadRelayStatus 호출
 
         // 주기적 업데이트
         sensorUpdateInterval = setInterval(loadSensorData, 5000); // 5초마다 센서 데이터 업데이트

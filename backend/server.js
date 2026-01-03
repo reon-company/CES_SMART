@@ -57,8 +57,13 @@ setInterval(() => {
 }, 3600000); // 1시간
 
 // Middleware
+// CORS 설정: 여러 origin을 배열로 처리
+const corsOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:3001'];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+  origin: corsOrigins,
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

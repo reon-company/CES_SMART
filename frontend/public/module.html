@@ -116,11 +116,7 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        // Get API base URL from api.js
-        const API_BASE_URL = (() => {
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            return isLocal ? 'http://localhost:3000' : 'https://CES-smart.reonaicoffee.com';
-        })();
+        // API_BASE_URL is already defined in api.js, so we don't need to redeclare it
         
         if (!auth.isAuthenticated()) {
             window.location.href = 'login.html';

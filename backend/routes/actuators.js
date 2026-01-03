@@ -47,9 +47,21 @@ router.get('/status/:moduleId', async (req, res) => {
       });
     }
 
+    // Convert MySQL TINYINT(1) to proper boolean values for JSON
+    // MySQL BOOLEAN is stored as 0/1, but JSON should use true/false for Arduino compatibility
+    const normalizedStatus = {
+      ...status,
+      water_pump: Boolean(status.water_pump),
+      air_pump: Boolean(status.air_pump),
+      valve: Boolean(status.valve),
+      heater: Boolean(status.heater),
+      cooler: Boolean(status.cooler),
+      relay: Boolean(status.relay)
+    };
+
     res.json({
       success: true,
-      status
+      status: normalizedStatus
     });
   } catch (error) {
     console.error('Get actuator status error:', error);

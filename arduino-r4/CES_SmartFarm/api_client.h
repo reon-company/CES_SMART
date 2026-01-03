@@ -311,17 +311,36 @@ public:
       return false;
     }
     
-    // Server returns: { "success": true, "status": { "relay": true/false, ... } }
+    // Server returns: { "success": true, "status": { "relay": 1/0 or true/false, ... } }
+    // MySQL BOOLEAN is stored as TINYINT(1), so it returns 1/0, not true/false
     if (doc.containsKey("status")) {
       JsonObject statusObj = doc["status"];
       if (statusObj.containsKey("relay")) {
-        relayState = statusObj["relay"] | false;
+        // Handle both boolean and integer (1/0) values
+        if (statusObj["relay"].is<bool>()) {
+          relayState = statusObj["relay"].as<bool>();
+        } else if (statusObj["relay"].is<int>()) {
+          relayState = (statusObj["relay"].as<int>() != 0);
+        } else {
+          relayState = false;
+        }
+        
+        if (LOG_LEVEL >= 1) {
+          Serial.print("Parsed relay state: ");
+          Serial.println(relayState ? "ON" : "OFF");
+        }
       } else {
         relayState = false;
       }
     } else if (doc.containsKey("relay")) {
       // Direct relay field (fallback)
-      relayState = doc["relay"] | false;
+      if (doc["relay"].is<bool>()) {
+        relayState = doc["relay"].as<bool>();
+      } else if (doc["relay"].is<int>()) {
+        relayState = (doc["relay"].as<int>() != 0);
+      } else {
+        relayState = false;
+      }
     } else {
       relayState = false;
     }

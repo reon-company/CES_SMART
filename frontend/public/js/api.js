@@ -8,8 +8,8 @@ const getApiBaseUrl = () => {
         return 'http://localhost:3000';
     }
 
-    // 프로덕션: HTTP 사용 (HTTPS는 도메인 설정 후 적용)
-    return 'http://43.203.141.2';
+    // 프로덕션: HTTPS 사용 (Let's Encrypt 인증서 발급 완료)
+    return 'https://CES-smart.reonaicoffee.com';
 };
 
 const API_BASE_URL = getApiBaseUrl();

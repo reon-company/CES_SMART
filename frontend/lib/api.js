@@ -1,7 +1,18 @@
 import axios from 'axios';
 
+// 브라우저 환경에서는 상대 경로를 사용하여 Vercel rewrites를 통해 프록시
+// 서버 사이드에서는 원래 백엔드 URL 사용
+const getBaseURL = () => {
+  if (typeof window !== 'undefined') {
+    // 브라우저 환경: 상대 경로 사용 (Vercel rewrites가 프록시)
+    return '/api';
+  }
+  // 서버 사이드: 원래 백엔드 URL 사용
+  return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://3.36.109.155:3000';
+};
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://54.180.160.232:3000',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },

@@ -154,7 +154,7 @@
                 module = response.module || response;
                 
                 document.getElementById('moduleName').textContent = module.name || '모듈';
-                document.getElementById('moduleMac').textContent = `MAC: ${module.macAddress || 'N/A'}`;
+                document.getElementById('moduleMac').textContent = `Module ID: ${module.module_id || 'N/A'}`;
             } catch (err) {
                 console.error('모듈 정보 로드 실패:', err);
                 alert('모듈 정보를 불러오는데 실패했습니다.');

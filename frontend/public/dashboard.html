@@ -64,12 +64,20 @@
             <form id="addModuleForm" class="space-y-4">
                 <div>
                     <label class="block text-gray-700 text-sm font-semibold mb-2">모듈 이름</label>
-                    <input type="text" id="moduleName" required
+                    <input type="text" id="moduleName" required placeholder="예: 1호 수조, 테스트 모듈"
                         class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-gray-700 text-sm font-semibold mb-2">MAC 주소</label>
-                    <input type="text" id="moduleMac" required placeholder="AA:BB:CC:DD:EE:FF"
+                    <label class="block text-gray-700 text-sm font-semibold mb-2">Module ID <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" id="moduleId" required placeholder="MODULE_001" pattern="[A-Za-z0-9_]+"
+                        title="영문자, 숫자, 언더스코어만 사용 가능"
+                        class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">아두이노 코드의 MODULE_ID와 정확히 일치해야 합니다</p>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-semibold mb-2">MAC 주소 (선택사항)</label>
+                    <input type="text" id="moduleMac" placeholder="AA:BB:CC:DD:EE:FF"
                         class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
                 </div>
                 <div class="flex space-x-4">
@@ -129,8 +137,8 @@
                                 삭제
                             </button>
                         </div>
-                        <p class="text-sm text-gray-600 mb-2">MAC: ${module.macAddress || 'N/A'}</p>
-                        <p class="text-sm text-gray-600 mb-4">ID: ${module.id}</p>
+                        <p class="text-sm text-gray-600 mb-2">Module ID: <span class="font-semibold">${module.module_id || 'N/A'}</span></p>
+                        ${module.macAddress ? `<p class="text-sm text-gray-600 mb-2">MAC: ${module.macAddress}</p>` : ''}
                         <a href="module.html?id=${module.id}" class="block mt-4 text-center bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
                             상세 보기
                         </a>
@@ -156,11 +164,17 @@
 
         document.getElementById('addModuleForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const name = document.getElementById('moduleName').value;
-            const macAddress = document.getElementById('moduleMac').value;
+            const name = document.getElementById('moduleName').value.trim();
+            const moduleId = document.getElementById('moduleId').value.trim();
+            const macAddress = document.getElementById('moduleMac').value.trim();
+
+            if (!name || !moduleId) {
+                alert('모듈 이름과 Module ID는 필수입니다.');
+                return;
+            }
 
             try {
-                await modulesAPI.create(name, macAddress);
+                await modulesAPI.create(name, moduleId, macAddress);
                 hideAddModuleModal();
                 loadModules();
             } catch (err) {
@@ -183,5 +197,7 @@
         loadModules();
     </script>
 </body>
+
+</html>
 
 </html>

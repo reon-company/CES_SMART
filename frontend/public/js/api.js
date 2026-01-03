@@ -148,10 +148,14 @@ const modulesAPI = {
         return apiRequest(`/api/modules/${id}`);
     },
 
-    create: async (name, macAddress) => {
+    create: async (name, moduleId, macAddress = null) => {
+        const body = { name, module_id: moduleId };
+        if (macAddress) {
+            body.macAddress = macAddress;
+        }
         return apiRequest('/api/modules', {
             method: 'POST',
-            body: JSON.stringify({ name, macAddress }),
+            body: JSON.stringify(body),
         });
     },
 

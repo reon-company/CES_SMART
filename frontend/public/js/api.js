@@ -57,24 +57,37 @@ async function apiRequest(endpoint, options = {}) {
     } catch (error) {
         console.error('API Error:', error);
 
-        // Mixed Content 오류 감지 (HTTPS 페이지에서 HTTP API 호출)
+        // 네트워크 오류 처리
         if (error instanceof TypeError && (
-            error.message.includes('fetch') ||
+            error.message.includes('fetch') || 
             error.message.includes('Failed to fetch') ||
             error.message.includes('network')
         )) {
+            // SSL 인증서 오류 감지
+            if (error.message.includes('CERT') || error.message.includes('certificate')) {
+                throw {
+                    response: {
+                        status: 0,
+                        data: { 
+                            message: 'SSL 인증서 오류: 브라우저에서 "고급" → "54.180.237.225(으)로 이동"을 클릭하여 인증서를 허용해주세요.',
+                            sslError: true
+                        }
+                    }
+                };
+            }
+            
             // HTTPS 페이지에서 HTTP API 호출 시도 감지
             if (window.location.protocol === 'https:' && API_BASE_URL.startsWith('http:')) {
                 throw {
                     response: {
                         status: 0,
-                        data: {
-                            message: 'HTTPS 보안 정책으로 인해 HTTP API를 호출할 수 없습니다. 백엔드 서버에 HTTPS 설정이 필요합니다.'
+                        data: { 
+                            message: 'HTTPS 보안 정책으로 인해 HTTP API를 호출할 수 없습니다. 백엔드 서버에 HTTPS 설정이 필요합니다.' 
                         }
                     }
                 };
             }
-
+            
             throw {
                 response: {
                     status: 0,

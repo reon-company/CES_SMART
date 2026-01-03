@@ -131,15 +131,25 @@
                 
                 if (err.response) {
                     if (err.response.status === 0) {
-                        if (err.response.data && err.response.data.message && 
-                            err.response.data.message.includes('HTTPS')) {
-                            message = err.response.data.message;
-                            // HTTPS 설정 안내 페이지로 이동 옵션 제공
-                            setTimeout(() => {
-                                if (confirm('HTTPS 설정이 필요합니다. 안내 페이지를 보시겠습니까?')) {
-                                    window.open('HTTPS_NOTICE.html', '_blank');
-                                }
-                            }, 100);
+                        if (err.response.data) {
+                            if (err.response.data.sslError) {
+                                message = err.response.data.message;
+                                // SSL 인증서 오류 안내
+                                setTimeout(() => {
+                                    if (confirm('SSL 인증서 오류가 발생했습니다.\n\n브라우저 주소창에서 자물쇠 아이콘을 클릭하고 "인증서 보기" → "고급" → "54.180.237.225(으)로 이동"을 클릭하거나,\n\n직접 https://54.180.237.225/api/health 로 접속하여 인증서를 허용해주세요.\n\n안내 페이지를 열까요?')) {
+                                        window.open('HTTPS_NOTICE.html', '_blank');
+                                    }
+                                }, 100);
+                            } else if (err.response.data.message && err.response.data.message.includes('HTTPS')) {
+                                message = err.response.data.message;
+                                setTimeout(() => {
+                                    if (confirm('HTTPS 설정이 필요합니다. 안내 페이지를 보시겠습니까?')) {
+                                        window.open('HTTPS_NOTICE.html', '_blank');
+                                    }
+                                }, 100);
+                            } else {
+                                message = err.response.data.message || '서버에 연결할 수 없습니다. 네트워크 연결을 확인하세요.';
+                            }
                         } else {
                             message = '서버에 연결할 수 없습니다. 네트워크 연결을 확인하세요.';
                         }

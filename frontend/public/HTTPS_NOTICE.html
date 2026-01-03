@@ -23,14 +23,32 @@
         <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 mb-6">
             <h3 class="font-bold text-yellow-800 mb-3">문제 상황</h3>
             <p class="text-yellow-700 mb-4">
-                HTTPS 프론트엔드(https://ces-smart.vercel.app)에서 HTTP 백엔드 API를 호출할 수 없습니다.
-                브라우저의 Mixed Content 보안 정책에 의해 차단됩니다.
+                SSL 인증서 오류(ERR_CERT_AUTHORITY_INVALID)가 발생했습니다.
+                자체 서명 인증서를 사용하고 있어 브라우저가 신뢰하지 않습니다.
             </p>
             
             <h3 class="font-bold text-yellow-800 mb-3">해결 방법</h3>
             <p class="text-yellow-700 mb-4">
-                백엔드 서버(54.180.237.225)에 HTTPS를 설정해야 합니다.
+                브라우저에서 인증서를 수동으로 허용해야 합니다.
             </p>
+            
+            <div class="bg-white rounded-lg p-4 mt-4 mb-4">
+                <h4 class="font-semibold mb-2">방법 1: 브라우저 주소창에서 허용</h4>
+                <ol class="list-decimal list-inside space-y-2 text-sm">
+                    <li>브라우저 주소창의 자물쇠 아이콘 클릭</li>
+                    <li>"인증서가 유효하지 않음" 또는 "연결이 비공개로 설정되어 있지 않음" 클릭</li>
+                    <li>"고급" 또는 "Advanced" 클릭</li>
+                    <li>"54.180.237.225(으)로 이동" 또는 "Proceed to 54.180.237.225" 클릭</li>
+                </ol>
+            </div>
+            
+            <div class="bg-white rounded-lg p-4 mt-4 mb-4">
+                <h4 class="font-semibold mb-2">방법 2: 직접 API 주소 접속</h4>
+                <p class="text-sm mb-2">다음 주소로 직접 접속하여 인증서 허용:</p>
+                <a href="https://54.180.237.225/api/health" target="_blank" class="text-blue-500 hover:underline break-all">
+                    https://54.180.237.225/api/health
+                </a>
+            </div>
             
             <div class="bg-white rounded-lg p-4 mt-4">
                 <h4 class="font-semibold mb-2">서버에서 실행할 명령어:</h4>

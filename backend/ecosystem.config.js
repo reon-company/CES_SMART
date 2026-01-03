@@ -8,15 +8,15 @@ module.exports = {
     instances: 1,
     exec_mode: 'fork',
     watch: false,
-    max_memory_restart: '500M',
+    max_memory_restart: '300M', // 메모리 제한을 더 낮춰서 조기 재시작
     error_file: './logs/err.log',
     out_file: './logs/out.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     merge_logs: true,
     autorestart: true,
-    max_restarts: 10,
-    min_uptime: '10s',
-    restart_delay: 4000,
+    max_restarts: 5, // 재시작 횟수 제한
+    min_uptime: '30s', // 최소 실행 시간 증가
+    restart_delay: 10000, // 재시작 지연 증가 (10초)
     env: {
       NODE_ENV: 'production',
       PORT: 3000

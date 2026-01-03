@@ -22,15 +22,39 @@ process.on('SIGINT', () => {
 });
 
 // 처리되지 않은 예외 처리
+let uncaughtExceptionCount = 0;
+const MAX_UNCAUGHT_EXCEPTIONS = 10;
+
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  // 서버를 종료하지 않고 로그만 남김 (PM2가 재시작)
+  uncaughtExceptionCount++;
+  console.error(`Uncaught Exception (${uncaughtExceptionCount}/${MAX_UNCAUGHT_EXCEPTIONS}):`, err);
+  
+  // 너무 많은 예외가 발생하면 프로세스 종료 (PM2가 재시작)
+  if (uncaughtExceptionCount >= MAX_UNCAUGHT_EXCEPTIONS) {
+    console.error('Too many uncaught exceptions, exiting...');
+    process.exit(1);
+  }
 });
 
+let unhandledRejectionCount = 0;
+const MAX_UNHANDLED_REJECTIONS = 20;
+
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // 서버를 종료하지 않고 로그만 남김
+  unhandledRejectionCount++;
+  console.error(`Unhandled Rejection (${unhandledRejectionCount}/${MAX_UNHANDLED_REJECTIONS}) at:`, promise, 'reason:', reason);
+  
+  // 너무 많은 rejection이 발생하면 프로세스 종료 (PM2가 재시작)
+  if (unhandledRejectionCount >= MAX_UNHANDLED_REJECTIONS) {
+    console.error('Too many unhandled rejections, exiting...');
+    process.exit(1);
+  }
 });
+
+// 카운터 리셋 (1시간마다)
+setInterval(() => {
+  uncaughtExceptionCount = Math.max(0, uncaughtExceptionCount - 1);
+  unhandledRejectionCount = Math.max(0, unhandledRejectionCount - 5);
+}, 3600000); // 1시간
 
 // Middleware
 app.use(cors({

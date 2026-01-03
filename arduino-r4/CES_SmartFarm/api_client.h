@@ -108,14 +108,57 @@ public:
       }
     }
 
-    // Read response
+    // Read response headers and body
+    String response = "";
+    bool headerEnded = false;
+    int statusCode = 0;
+    
     while (client.available()) {
       String line = client.readStringUntil('\r');
-      Serial.println(line);
+      
+      // Check HTTP status line
+      if (line.startsWith("HTTP/1.1 ")) {
+        statusCode = line.substring(9, 12).toInt();
+        if (LOG_LEVEL >= 1) {
+          Serial.println(line);
+        }
+      } else if (line.length() == 0 && !headerEnded) {
+        headerEnded = true;
+        continue;
+      } else if (headerEnded) {
+        // Response body
+        response += line;
+      } else if (LOG_LEVEL >= 2) {
+        Serial.println(line);
+      }
     }
 
-    client.stop();
-    return true;
+    // Check status code
+    if (statusCode >= 200 && statusCode < 300) {
+      if (LOG_LEVEL >= 1) {
+        Serial.println("Sensor data sent successfully");
+      }
+      client.stop();
+      return true;
+    } else {
+      // Parse error response
+      if (response.length() > 0) {
+        StaticJsonDocument<200> errorDoc;
+        DeserializationError error = deserializeJson(errorDoc, response);
+        if (!error && errorDoc.containsKey("message")) {
+          Serial.print("Server error: ");
+          Serial.println(errorDoc["message"].as<String>());
+        } else {
+          Serial.print("HTTP error: ");
+          Serial.println(statusCode);
+        }
+      } else {
+        Serial.print("HTTP error: ");
+        Serial.println(statusCode);
+      }
+      client.stop();
+      return false;
+    }
   }
 
   // Get relay status from server
@@ -152,18 +195,43 @@ public:
       }
     }
 
-    // Read response
+    // Read response headers and body
     String response = "";
     bool headerEnded = false;
+    int statusCode = 0;
+    
     while (client.available()) {
       String line = client.readStringUntil('\r');
-      if (line.length() == 0 && !headerEnded) {
+      
+      // Check HTTP status line
+      if (line.startsWith("HTTP/1.1 ")) {
+        statusCode = line.substring(9, 12).toInt();
+        if (LOG_LEVEL >= 1) {
+          Serial.println(line);
+        }
+      } else if (line.length() == 0 && !headerEnded) {
         headerEnded = true;
         continue;
-      }
-      if (headerEnded) {
+      } else if (headerEnded) {
+        // Response body
         response += line;
+      } else if (LOG_LEVEL >= 2) {
+        Serial.println(line);
       }
+    }
+
+    // Check if response is empty (404 or other errors)
+    if (response.length() == 0) {
+      Serial.print("Empty response (HTTP ");
+      Serial.print(statusCode);
+      Serial.println(")");
+      if (statusCode == 404) {
+        Serial.println("ERROR: Module not found! Please register module in web dashboard.");
+        Serial.print("Current MODULE_ID: ");
+        Serial.println(MODULE_ID);
+      }
+      client.stop();
+      return false;
     }
 
     if (LOG_LEVEL >= 2) {
@@ -178,6 +246,18 @@ public:
     if (error) {
       Serial.print("JSON parsing failed: ");
       Serial.println(error.c_str());
+      Serial.print("Response was: ");
+      Serial.println(response);
+      client.stop();
+      return false;
+    }
+    
+    // Check for error in response
+    if (doc.containsKey("success") && !doc["success"]) {
+      if (doc.containsKey("message")) {
+        Serial.print("Server error: ");
+        Serial.println(doc["message"].as<String>());
+      }
       client.stop();
       return false;
     }

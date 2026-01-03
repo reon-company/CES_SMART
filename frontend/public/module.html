@@ -333,8 +333,15 @@
             }
             
             const switchElement = document.getElementById('relaySwitch');
+            if (!switchElement) {
+                console.error('Relay switch element not found');
+                return;
+            }
+            
             const newState = switchElement.checked;
             const messageDiv = document.getElementById('relayMessage');
+            
+            console.log('Toggle relay called:', { moduleModuleId, newState });
             
             messageDiv.textContent = '제어 중...';
             messageDiv.className = 'mt-4 text-sm text-blue-600';
@@ -342,37 +349,61 @@
             try {
                 // module_id를 사용하여 릴레이 제어 API 호출
                 const token = auth.getToken();
-                const response = await fetch(`${API_BASE_URL}/api/actuators/${moduleModuleId}/relay`, {
+                if (!token) {
+                    throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+                }
+                
+                const url = `${API_BASE_URL}/api/actuators/${moduleModuleId}/relay`;
+                const requestBody = { action: newState ? 'on' : 'off' };
+                
+                console.log('Sending relay control request:', { url, body: requestBody });
+                
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ action: newState ? 'on' : 'off' })
+                    body: JSON.stringify(requestBody)
                 });
+                
+                console.log('Relay control response status:', response.status);
                 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || '릴레이 제어에 실패했습니다.');
+                    console.error('Relay control error response:', errorData);
+                    throw new Error(errorData.message || `서버 오류 (${response.status})`);
                 }
                 
                 const result = await response.json();
-                console.log('Relay control result:', result);
+                console.log('Relay control success:', result);
                 
                 messageDiv.textContent = newState ? '릴레이가 켜졌습니다.' : '릴레이가 꺼졌습니다.';
                 messageDiv.className = 'mt-4 text-sm text-green-600';
                 
                 // 상태 업데이트
-                document.getElementById('relayStatus').textContent = newState ? 'ON' : 'OFF';
-                document.getElementById('relayStatus').className = newState ? 'font-bold text-green-600' : 'font-bold text-gray-600';
-                document.getElementById('relayLabel').textContent = newState ? 'ON' : 'OFF';
+                const statusElement = document.getElementById('relayStatus');
+                if (statusElement) {
+                    statusElement.textContent = newState ? 'ON' : 'OFF';
+                    statusElement.className = newState ? 'font-bold text-green-600' : 'font-bold text-gray-600';
+                }
+                
+                const labelElement = document.getElementById('relayLabel');
+                if (labelElement) {
+                    labelElement.textContent = newState ? 'ON' : 'OFF';
+                }
                 
                 // 3초 후 메시지 제거
                 setTimeout(() => {
                     messageDiv.textContent = '';
                 }, 3000);
+                
+                // 상태 다시 로드 (서버에서 최신 상태 확인)
+                setTimeout(loadRelayStatus, 500);
             } catch (err) {
                 console.error('릴레이 제어 실패:', err);
+                console.error('Error details:', err);
+                
                 messageDiv.textContent = err.message || '릴레이 제어에 실패했습니다.';
                 messageDiv.className = 'mt-4 text-sm text-red-600';
                 
@@ -384,13 +415,30 @@
             }
         }
 
-        // 릴레이 스위치 이벤트 리스너 등록
-        document.addEventListener('DOMContentLoaded', () => {
-            const relaySwitch = document.getElementById('relaySwitch');
-            if (relaySwitch) {
-                relaySwitch.addEventListener('change', toggleRelay);
+        // 릴레이 스위치 이벤트 리스너 등록 (즉시 실행)
+        // DOMContentLoaded를 기다리지 않고 스크립트가 로드된 후 즉시 등록
+        (function() {
+            function setupRelaySwitch() {
+                const relaySwitch = document.getElementById('relaySwitch');
+                if (relaySwitch) {
+                    // 기존 이벤트 리스너 제거 후 새로 등록
+                    relaySwitch.removeEventListener('change', toggleRelay);
+                    relaySwitch.addEventListener('change', toggleRelay);
+                    console.log('Relay switch event listener registered');
+                } else {
+                    // 요소가 아직 없으면 잠시 후 다시 시도
+                    setTimeout(setupRelaySwitch, 100);
+                }
             }
-        });
+            
+            // DOM이 준비되면 즉시 실행
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setupRelaySwitch);
+            } else {
+                // DOM이 이미 로드되어 있으면 즉시 실행
+                setupRelaySwitch();
+            }
+        })();
 
         // 초기 로드
         loadUserInfo();

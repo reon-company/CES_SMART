@@ -118,25 +118,40 @@ router.post('/:moduleId/:actuatorType', auth, async (req, res) => {
     const { moduleId, actuatorType } = req.params;
     const { action } = req.body;
     
+    // Debug logging
+    console.log(`[PRIVATE] POST /api/actuators/${moduleId}/${actuatorType} - Action: ${action}`);
+    
     // Convert action to boolean
-    const status = action === 'on' || action === true;
+    const status = action === 'on' || action === true || action === 'true';
     
     // Map actuator type
     const actuator = actuatorType === 'relay' ? 'relay' : actuatorType;
 
     // Verify module belongs to user
     const module = await Module.findByModuleId(moduleId);
-    if (!module || module.user_id !== req.user.id) {
+    if (!module) {
+      console.log(`Module not found: ${moduleId}`);
       return res.status(404).json({
         success: false,
         message: 'Module not found'
       });
     }
+    
+    if (module.user_id !== req.user.id) {
+      console.log(`Module ${moduleId} does not belong to user ${req.user.id}`);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    console.log(`Updating ${actuator} to ${status} for module ${moduleId}`);
 
     // Update actuator status
     const updated = await ActuatorStatus.updateStatus(moduleId, actuator, status);
 
     if (!updated) {
+      console.error(`Failed to update ${actuator} status for module ${moduleId}`);
       return res.status(400).json({
         success: false,
         message: 'Failed to update actuator status'
@@ -146,6 +161,8 @@ router.post('/:moduleId/:actuatorType', auth, async (req, res) => {
     // Get updated status
     const actuatorStatus = await ActuatorStatus.findByModuleId(moduleId);
 
+    console.log(`Successfully updated ${actuator} to ${status} for module ${moduleId}`);
+
     res.json({
       success: true,
       message: `Actuator ${actuator} ${status ? 'turned on' : 'turned off'}`,
@@ -153,9 +170,11 @@ router.post('/:moduleId/:actuatorType', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Control actuator error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

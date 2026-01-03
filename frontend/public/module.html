@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모듈 상세 - CES 스마트팜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+        * {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <a href="dashboard.html" class="text-white hover:text-gray-200">
+                        <span class="text-2xl">←</span>
+                    </a>
+                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                        <span class="text-2xl">🌱</span>
+                    </div>
+                    <h1 class="text-2xl font-bold">모듈 상세</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userEmail" class="text-sm">로딩 중...</span>
+                    <button onclick="auth.logout()"
+                        class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">
+                        로그아웃
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <div id="moduleInfo" class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <h2 id="moduleName" class="text-3xl font-bold text-gray-800 mb-2">로딩 중...</h2>
+                <p id="moduleMac" class="text-gray-600">MAC: 로딩 중...</p>
+            </div>
+        </div>
+
+        <!-- 센서 데이터 섹션 -->
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <div class="flex items-center space-x-3 mb-6">
+                    <span class="text-3xl">📊</span>
+                    <h2 class="text-2xl font-bold text-gray-900">센서 데이터</h2>
+                </div>
+                <div id="sensorData" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border-2 border-blue-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">온도</p>
+                                <p class="text-3xl font-bold text-blue-700">
+                                    <span id="temperature">--</span>
+                                    <span class="text-lg">°C</span>
+                                </p>
+                            </div>
+                            <span class="text-4xl">🌡️</span>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border-2 border-green-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">습도</p>
+                                <p class="text-3xl font-bold text-green-700">
+                                    <span id="humidity">--</span>
+                                    <span class="text-lg">%</span>
+                                </p>
+                            </div>
+                            <span class="text-4xl">💧</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-sm text-gray-500">
+                    마지막 업데이트: <span id="lastUpdate">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 릴레이 제어 섹션 -->
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <div class="flex items-center space-x-3 mb-6">
+                    <span class="text-3xl">⚙️</span>
+                    <h2 class="text-2xl font-bold text-gray-900">릴레이 제어</h2>
+                </div>
+                <div class="flex items-center justify-between p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-4xl">🔌</span>
+                        <div>
+                            <p class="text-lg font-semibold text-gray-800">릴레이 모듈</p>
+                            <p class="text-sm text-gray-600">현재 상태: <span id="relayStatus" class="font-bold">확인 중...</span></p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="relaySwitch" class="sr-only peer" onchange="toggleRelay()">
+                        <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                        <span class="ml-3 text-sm font-medium text-gray-700" id="relayLabel">OFF</span>
+                    </label>
+                </div>
+                <div id="relayMessage" class="mt-4 text-sm text-gray-600"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Get API base URL from api.js
+        const API_BASE_URL = (() => {
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            return isLocal ? 'http://localhost:3000' : 'http://54.180.160.232:3000';
+        })();
+        
+        if (!auth.isAuthenticated()) {
+            window.location.href = 'login.html';
+        }
+
+        // Get module ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const moduleId = urlParams.get('id');
+
+        if (!moduleId) {
+            alert('모듈 ID가 없습니다.');
+            window.location.href = 'dashboard.html';
+        }
+
+        let module = null;
+        let sensorUpdateInterval = null;
+        let relayUpdateInterval = null;
+
+        async function loadUserInfo() {
+            try {
+                const user = await authAPI.getMe();
+                document.getElementById('userEmail').textContent = user.email || '사용자';
+            } catch (err) {
+                console.error('사용자 정보 로드 실패:', err);
+            }
+        }
+
+        async function loadModule() {
+            try {
+                const response = await modulesAPI.getById(moduleId);
+                module = response.module || response;
+                
+                document.getElementById('moduleName').textContent = module.name || '모듈';
+                document.getElementById('moduleMac').textContent = `MAC: ${module.macAddress || 'N/A'}`;
+            } catch (err) {
+                console.error('모듈 정보 로드 실패:', err);
+                alert('모듈 정보를 불러오는데 실패했습니다.');
+                window.location.href = 'dashboard.html';
+            }
+        }
+
+        async function loadSensorData() {
+            try {
+                // Use latest endpoint
+                const token = auth.getToken();
+                const response = await fetch(`${API_BASE_URL}/api/sensors/latest/${moduleId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('센서 데이터를 불러올 수 없습니다.');
+                }
+                
+                const result = await response.json();
+                const data = result.data || result;
+                
+                // DHT11 데이터 (온도, 습도)
+                if (data.temperature !== undefined) {
+                    document.getElementById('temperature').textContent = data.temperature.toFixed(1);
+                }
+                if (data.humidity !== undefined) {
+                    document.getElementById('humidity').textContent = data.humidity.toFixed(1);
+                }
+                
+                // 마지막 업데이트 시간
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('ko-KR');
+            } catch (err) {
+                console.error('센서 데이터 로드 실패:', err);
+                document.getElementById('temperature').textContent = '--';
+                document.getElementById('humidity').textContent = '--';
+            }
+        }
+
+        async function loadRelayStatus() {
+            try {
+                const response = await actuatorsAPI.getStatus(moduleId);
+                const status = response.status || response;
+                
+                // 릴레이 상태 확인 (여러 가능한 필드명 시도)
+                let relayState = false;
+                if (status.relay !== undefined) {
+                    relayState = status.relay;
+                } else if (status.relay_state !== undefined) {
+                    relayState = status.relay_state;
+                } else if (status.state !== undefined) {
+                    relayState = status.state;
+                }
+                
+                // 스위치 상태 업데이트
+                const switchElement = document.getElementById('relaySwitch');
+                switchElement.checked = relayState;
+                
+                // 상태 표시 업데이트
+                document.getElementById('relayStatus').textContent = relayState ? 'ON' : 'OFF';
+                document.getElementById('relayStatus').className = relayState ? 'font-bold text-green-600' : 'font-bold text-gray-600';
+                document.getElementById('relayLabel').textContent = relayState ? 'ON' : 'OFF';
+            } catch (err) {
+                console.error('릴레이 상태 로드 실패:', err);
+                document.getElementById('relayStatus').textContent = '오류';
+            }
+        }
+
+        async function toggleRelay() {
+            const switchElement = document.getElementById('relaySwitch');
+            const newState = switchElement.checked;
+            const messageDiv = document.getElementById('relayMessage');
+            
+            messageDiv.textContent = '제어 중...';
+            messageDiv.className = 'mt-4 text-sm text-blue-600';
+            
+            try {
+                // 릴레이 제어 API 호출
+                const response = await actuatorsAPI.control(moduleId, 'relay', newState ? 'on' : 'off');
+                
+                messageDiv.textContent = newState ? '릴레이가 켜졌습니다.' : '릴레이가 꺼졌습니다.';
+                messageDiv.className = 'mt-4 text-sm text-green-600';
+                
+                // 상태 업데이트
+                document.getElementById('relayStatus').textContent = newState ? 'ON' : 'OFF';
+                document.getElementById('relayStatus').className = newState ? 'font-bold text-green-600' : 'font-bold text-gray-600';
+                document.getElementById('relayLabel').textContent = newState ? 'ON' : 'OFF';
+                
+                // 3초 후 메시지 제거
+                setTimeout(() => {
+                    messageDiv.textContent = '';
+                }, 3000);
+            } catch (err) {
+                console.error('릴레이 제어 실패:', err);
+                messageDiv.textContent = err.response?.data?.message || '릴레이 제어에 실패했습니다.';
+                messageDiv.className = 'mt-4 text-sm text-red-600';
+                
+                // 스위치 되돌리기
+                switchElement.checked = !newState;
+                
+                // 상태 다시 로드
+                loadRelayStatus();
+            }
+        }
+
+        // 초기 로드
+        loadUserInfo();
+        loadModule();
+        loadSensorData();
+        loadRelayStatus();
+
+        // 주기적 업데이트
+        sensorUpdateInterval = setInterval(loadSensorData, 5000); // 5초마다 센서 데이터 업데이트
+        relayUpdateInterval = setInterval(loadRelayStatus, 10000); // 10초마다 릴레이 상태 업데이트
+
+        // 페이지 언로드 시 인터벌 정리
+        window.addEventListener('beforeunload', () => {
+            if (sensorUpdateInterval) clearInterval(sensorUpdateInterval);
+            if (relayUpdateInterval) clearInterval(relayUpdateInterval);
+        });
+    </script>
+</body>
+
+</html>
+

@@ -25,5 +25,8 @@
 // Timing Configuration
 #define SENSOR_UPDATE_INTERVAL 30000  // 30초 (밀리초)
 
+// Log level control (0=none, 1=essential, 2=detailed)
+#define LOG_LEVEL 1
+
 #endif
 

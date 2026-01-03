@@ -34,7 +34,8 @@ router.get('/status/:moduleId', auth, async (req, res) => {
           air_pump: false,
           valve: false,
           heater: false,
-          cooler: false
+          cooler: false,
+          relay: false
         }
       });
     }
@@ -52,13 +53,19 @@ router.get('/status/:moduleId', auth, async (req, res) => {
   }
 });
 
-// @route   POST /api/actuators/control/:moduleId
-// @desc    Control actuator for a module
+// @route   POST /api/actuators/:moduleId/:actuatorType
+// @desc    Control actuator for a module (alternative endpoint)
 // @access  Private
-router.post('/control/:moduleId', auth, actuatorControlValidation, validate, async (req, res) => {
+router.post('/:moduleId/:actuatorType', auth, async (req, res) => {
   try {
-    const { moduleId } = req.params;
-    const { actuator, status } = req.body;
+    const { moduleId, actuatorType } = req.params;
+    const { action } = req.body;
+    
+    // Convert action to boolean
+    const status = action === 'on' || action === true;
+    
+    // Map actuator type
+    const actuator = actuatorType === 'relay' ? 'relay' : actuatorType;
 
     // Verify module belongs to user
     const module = await Module.findByModuleId(moduleId);
@@ -96,13 +103,21 @@ router.post('/control/:moduleId', auth, actuatorControlValidation, validate, asy
   }
 });
 
+// @route   POST /api/actuators/control/:moduleId
+// @desc    Control actuator for a module (original endpoint)
+// @access  Private
+router.post('/control/:moduleId', auth, actuatorControlValidation, validate, async (req, res) => {
+  try {
+    const { moduleId } = req.params;
+    const { actuator, status } = req.body;
+
 // @route   POST /api/actuators/status/update/:moduleId
 // @desc    Update multiple actuator statuses (for Arduino polling)
 // @access  Public (아두이노에서 직접 호출 가능하지만, 모듈 검증 필요)
 router.post('/status/update/:moduleId', async (req, res) => {
   try {
     const { moduleId } = req.params;
-    const { water_pump, air_pump, valve, heater, cooler } = req.body;
+    const { water_pump, air_pump, valve, heater, cooler, relay } = req.body;
 
     // Verify module exists
     const module = await Module.findByModuleId(moduleId);
@@ -119,7 +134,8 @@ router.post('/status/update/:moduleId', async (req, res) => {
       air_pump,
       valve,
       heater,
-      cooler
+      cooler,
+      relay
     });
 
     const actuatorStatus = await ActuatorStatus.findByModuleId(moduleId);

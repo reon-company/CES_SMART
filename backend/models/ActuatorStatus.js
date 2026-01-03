@@ -17,7 +17,7 @@ class ActuatorStatus {
       // Update existing record
       const [result] = await pool.execute(
         `UPDATE actuator_status 
-         SET water_pump = ?, air_pump = ?, valve = ?, heater = ?, cooler = ? 
+         SET water_pump = ?, air_pump = ?, valve = ?, heater = ?, cooler = ?, relay = ? 
          WHERE module_id = ?`,
         [
           data.water_pump !== undefined ? data.water_pump : existing.water_pump,
@@ -25,6 +25,7 @@ class ActuatorStatus {
           data.valve !== undefined ? data.valve : existing.valve,
           data.heater !== undefined ? data.heater : existing.heater,
           data.cooler !== undefined ? data.cooler : existing.cooler,
+          data.relay !== undefined ? data.relay : (existing.relay || false),
           moduleId
         ]
       );
@@ -33,15 +34,16 @@ class ActuatorStatus {
       // Create new record
       const [result] = await pool.execute(
         `INSERT INTO actuator_status 
-         (module_id, water_pump, air_pump, valve, heater, cooler) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
+         (module_id, water_pump, air_pump, valve, heater, cooler, relay) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           moduleId,
           data.water_pump || false,
           data.air_pump || false,
           data.valve || false,
           data.heater || false,
-          data.cooler || false
+          data.cooler || false,
+          data.relay || false
         ]
       );
       return result.insertId;
@@ -54,7 +56,8 @@ class ActuatorStatus {
       air_pump: 'air_pump',
       valve: 'valve',
       heater: 'heater',
-      cooler: 'cooler'
+      cooler: 'cooler',
+      relay: 'relay'
     };
 
     if (!fieldMap[actuator]) {
@@ -69,7 +72,8 @@ class ActuatorStatus {
         air_pump: false,
         valve: false,
         heater: false,
-        cooler: false
+        cooler: false,
+        relay: false
       };
       defaultData[actuator] = status;
       return await this.createOrUpdate(moduleId, defaultData);

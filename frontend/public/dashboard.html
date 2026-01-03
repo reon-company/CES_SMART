@@ -124,12 +124,13 @@
                 modulesList.innerHTML = modules.map(module => `
                     <div class="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition border-2 border-gray-200">
                         <div class="flex items-center justify-between mb-4">
-                            <h4 class="text-xl font-bold text-gray-800">${module.name}</h4>
-                            <button onclick="deleteModule(${module.id})" class="text-red-500 hover:text-red-700">
+                            <h4 class="text-xl font-bold text-gray-800">${module.name || '모듈'}</h4>
+                            <button onclick="deleteModule(${module.id})" class="text-red-500 hover:text-red-700 text-sm">
                                 삭제
                             </button>
                         </div>
-                        <p class="text-sm text-gray-600 mb-2">MAC: ${module.macAddress}</p>
+                        <p class="text-sm text-gray-600 mb-2">MAC: ${module.macAddress || 'N/A'}</p>
+                        <p class="text-sm text-gray-600 mb-4">ID: ${module.id}</p>
                         <a href="module.html?id=${module.id}" class="block mt-4 text-center bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
                             상세 보기
                         </a>

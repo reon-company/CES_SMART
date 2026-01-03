@@ -43,8 +43,7 @@ APIClient apiClient;
 unsigned long lastSensorUpdate = 0;
 unsigned long lastActuatorCheck = 0;
 
-// Log level control (0=none, 1=essential, 2=detailed)
-#define LOG_LEVEL 1
+// Log level is defined in config.h
 
 // WiFi reconnect state machine
 enum WiFiReconnectState {

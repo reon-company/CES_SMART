@@ -11,7 +11,7 @@ const router = express.Router();
 // @access  Public (아두이노에서 직접 호출)
 router.post('/', sensorDataValidation, validate, async (req, res) => {
   try {
-    const { module_id, water_level, temperature, do_level, ph_level, light_level } = req.body;
+    const { module_id, water_level, temperature, humidity, do_level, ph_level, light_level } = req.body;
 
     // Verify module exists
     const module = await Module.findByModuleId(module_id);
@@ -22,10 +22,11 @@ router.post('/', sensorDataValidation, validate, async (req, res) => {
       });
     }
 
-    // Save sensor data
+    // Save sensor data (DHT11: temperature, humidity)
     const dataId = await SensorData.create(module_id, {
       water_level,
       temperature,
+      humidity,
       do_level,
       ph_level,
       light_level

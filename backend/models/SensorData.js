@@ -4,12 +4,13 @@ class SensorData {
   static async create(moduleId, data) {
     const [result] = await pool.execute(
       `INSERT INTO sensor_data 
-       (module_id, water_level, temperature, do_level, ph_level, light_level) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       (module_id, water_level, temperature, humidity, do_level, ph_level, light_level) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         moduleId,
         data.water_level || null,
         data.temperature || null,
+        data.humidity || null,
         data.do_level || null,
         data.ph_level || null,
         data.light_level || null

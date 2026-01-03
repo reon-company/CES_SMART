@@ -1,6 +1,7 @@
 # Arduino R4 WiFi 셋업 가이드
 
 ## 목차
+
 1. [필수 준비사항](#필수-준비사항)
 2. [하드웨어 연결](#하드웨어-연결)
 3. [소프트웨어 설치](#소프트웨어-설치)
@@ -13,6 +14,7 @@
 ## 필수 준비사항
 
 ### 하드웨어
+
 - **Arduino UNO R4 WiFi** 보드
 - **DHT11** 온도/습도 센서
 - **1채널 5V 미니 릴레이 모듈 [SZH-EK082]**
@@ -21,6 +23,7 @@
 - 브레드보드 (선택사항)
 
 ### 소프트웨어
+
 - **Arduino IDE** (최신 버전 권장)
   - 다운로드: https://www.arduino.cc/en/software
 
@@ -30,27 +33,29 @@
 
 ### DHT11 센서 연결
 
-| DHT11 핀 | Arduino R4 핀 | 설명 |
-|---------|---------------|------|
-| VCC | 5V | 전원 (또는 3.3V 가능) |
-| GND | GND | 그라운드 |
-| DATA | **핀 2** | 데이터 신호 (디지털) |
+| DHT11 핀 | Arduino R4 핀 | 설명                  |
+| -------- | ------------- | --------------------- |
+| VCC      | 5V            | 전원 (또는 3.3V 가능) |
+| GND      | GND           | 그라운드              |
+| DATA     | **핀 2**      | 데이터 신호 (디지털)  |
 
 **참고**: DHT11의 DATA 핀과 Arduino 사이에 **4.7kΩ 풀업 저항**을 연결하는 것을 권장합니다 (일부 모듈에는 이미 내장되어 있음).
 
 ### 릴레이 모듈 연결
 
-| 릴레이 모듈 핀 | Arduino R4 핀 | 설명 |
-|---------------|---------------|------|
-| VCC | 5V | 전원 |
-| GND | GND | 그라운드 |
-| IN | **핀 3** | 제어 신호 (디지털) |
+| 릴레이 모듈 핀 | Arduino R4 핀 | 설명               |
+| -------------- | ------------- | ------------------ |
+| VCC            | 5V            | 전원               |
+| GND            | GND           | 그라운드           |
+| IN             | **핀 3**      | 제어 신호 (디지털) |
 
 **릴레이 동작 방식**:
+
 - LOW 신호 (0V) → 릴레이 ON
 - HIGH 신호 (5V) → 릴레이 OFF
 
 **주의사항**:
+
 - 릴레이 모듈의 NO (Normally Open) / COM / NC (Normally Closed) 단자는 실제 부하(전구, 모터 등)를 연결할 때 사용합니다.
 - 테스트 시에는 릴레이 모듈의 LED만으로 동작 확인이 가능합니다.
 
@@ -93,15 +98,18 @@ Arduino R4 WiFi
 #### 필수 라이브러리
 
 1. **WiFiS3**
+
    - Arduino R4 WiFi용 WiFi 라이브러리
    - 보드 패키지와 함께 자동 설치됨
 
 2. **ArduinoJson** (버전 6.x)
+
    - 검색어: "ArduinoJson"
    - 작성자: Benoit Blanchon
    - 버전 6.21.x 이상 권장
 
 3. **DHT sensor library**
+
    - 검색어: "DHT sensor library"
    - 작성자: Adafruit
    - 버전 1.4.x 이상
@@ -113,6 +121,7 @@ Arduino R4 WiFi
 #### 설치 확인
 
 라이브러리 설치 후 다음 경로에서 확인 가능:
+
 - **Sketch > Include Library** 메뉴에 라이브러리 이름이 표시되어야 함
 
 ---
@@ -158,6 +167,7 @@ CES_SmartFarm/
 ```
 
 **중요 설정 항목**:
+
 - `API_BASE_URL`: 백엔드 서버 주소 (프로덕션/개발 환경에 맞게 변경)
 - `MODULE_ID`: 각 아두이노 모듈마다 고유한 ID (예: MODULE_001, MODULE_002, ...)
 
@@ -180,6 +190,7 @@ CES_SmartFarm/
 3. **Sketch > Upload** (`Ctrl+U` / `Cmd+U`)로 업로드
 
 **업로드 실패 시**:
+
 - Arduino R4는 부트로더 모드가 필요할 수 있습니다
 - **RESET 버튼을 빠르게 두 번 연속 클릭**하여 부트로더 모드 진입
 - 업로드 중 "SAM-BA operation failed" 오류 발생 시 위 방법 시도
@@ -247,11 +258,13 @@ Sensor data sent
 ### 시리얼 모니터에 아무것도 안 나타남
 
 **원인**:
+
 - 보드레이트 불일치
 - USB 케이블 문제
 - 코드 실행 전 크래시
 
 **해결 방법**:
+
 1. 시리얼 모니터 보드레이트를 **9600**으로 설정 확인
 2. USB 케이블 교체 (데이터 전송 가능한 케이블 사용)
 3. Arduino R4의 LED가 깜빡이는지 확인
@@ -261,11 +274,13 @@ Sensor data sent
 ### WiFi 연결 실패
 
 **원인**:
+
 - WiFi SSID/비밀번호 오류
 - 신호 약함
 - 라우터 설정 문제
 
 **해결 방법**:
+
 1. WiFi 설정 포털에서 SSID/비밀번호 재입력
 2. 아두이노를 라우터 가까이로 이동
 3. 2.4GHz WiFi 사용 확인 (5GHz는 Arduino R4 WiFi에서 지원 안 함)
@@ -274,11 +289,13 @@ Sensor data sent
 ### 센서 데이터가 -999.0으로 표시됨
 
 **원인**:
+
 - DHT11 센서 연결 문제
 - 센서 불량
 - 풀업 저항 누락
 
 **해결 방법**:
+
 1. DHT11 연결 확인 (VCC, GND, DATA)
 2. DATA 핀과 5V 사이에 4.7kΩ 풀업 저항 추가
 3. 센서 교체 테스트
@@ -287,11 +304,13 @@ Sensor data sent
 ### 릴레이가 동작하지 않음
 
 **원인**:
+
 - 릴레이 모듈 연결 문제
 - 핀 번호 오류
 - 릴레이 모듈 불량
 
 **해결 방법**:
+
 1. 릴레이 모듈 연결 확인 (VCC, GND, IN)
 2. 핀 번호 확인 (`config.h`의 `RELAY_PIN`)
 3. 시리얼 모니터에서 "Relay updated from server: ON/OFF" 메시지 확인
@@ -301,11 +320,13 @@ Sensor data sent
 ### 서버 연결 실패
 
 **원인**:
+
 - API_BASE_URL 오류
 - 서버 다운
 - 네트워크 문제
 
 **해결 방법**:
+
 1. `config.h`의 `API_BASE_URL` 확인
 2. 서버 상태 확인 (웹 브라우저에서 접속 테스트)
 3. 시리얼 모니터에서 "Connection to server failed!" 메시지 확인
@@ -316,12 +337,15 @@ Sensor data sent
 **자주 발생하는 오류**:
 
 1. **"WiFiS3.h: No such file or directory"**
+
    - Arduino R4 WiFi 보드 패키지 재설치
 
 2. **"DHT.h: No such file or directory"**
+
    - DHT sensor library 설치 확인
 
 3. **"ArduinoJson.h: No such file or directory"**
+
    - ArduinoJson 라이브러리 설치 확인
 
 4. **"EEPROM.begin() was not declared"**
@@ -388,8 +412,8 @@ WiFi 설정을 초기화하려면:
 ## 지원
 
 문제가 지속되면 다음 정보와 함께 문의:
+
 - 시리얼 모니터 전체 출력
 - 하드웨어 연결 사진
 - `config.h` 설정 내용
 - Arduino IDE 버전 및 보드 패키지 버전
-

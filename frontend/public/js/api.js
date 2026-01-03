@@ -8,11 +8,8 @@ const getApiBaseUrl = () => {
         return 'http://localhost:3000';
     }
 
-    // 프로덕션: HTTP 사용 (임시 - HTTPS 설정 전까지)
-    // HTTPS 페이지에서 HTTP API 호출 시 Mixed Content 오류 발생하지만,
-    // 최소한 에러 메시지는 표시됨
-    // TODO: 백엔드에 HTTPS 설정 후 https://54.180.237.225로 변경
-    return 'http://54.180.237.225:3000';
+    // 프로덕션: HTTPS 사용 (Nginx 리버스 프록시)
+    return 'https://54.180.237.225';
 };
 
 const API_BASE_URL = getApiBaseUrl();

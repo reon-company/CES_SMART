@@ -139,9 +139,14 @@
                         </div>
                         <p class="text-sm text-gray-600 mb-2">Module ID: <span class="font-semibold">${module.module_id || 'N/A'}</span></p>
                         ${module.macAddress ? `<p class="text-sm text-gray-600 mb-2">MAC: ${module.macAddress}</p>` : ''}
-                        <a href="module.html?id=${module.id}" class="block mt-4 text-center bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
-                            상세 보기
-                        </a>
+                        <div class="mt-4 flex space-x-2">
+                            <a href="module.html?id=${module.id}" class="flex-1 text-center bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
+                                제어
+                            </a>
+                            <a href="module-data.html?id=${module.id}" class="flex-1 text-center bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition">
+                                데이터
+                            </a>
+                        </div>
                     </div>
                 `).join('');
             } catch (err) {

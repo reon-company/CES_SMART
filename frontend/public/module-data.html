@@ -215,6 +215,7 @@
         async function loadData() {
             if (!moduleModuleId) {
                 console.log('Waiting for module_id...');
+                setTimeout(loadData, 500);
                 return;
             }
 
@@ -222,17 +223,29 @@
             const endDate = document.getElementById('endDate').value;
             const limit = parseInt(document.getElementById('dataLimit').value);
 
+            // Show loading state
+            document.getElementById('dataTableBody').innerHTML = 
+                '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">데이터를 불러오는 중...</td></tr>';
+
             try {
                 const token = auth.getToken();
                 if (!token) {
                     console.error('No authentication token');
+                    document.getElementById('dataTableBody').innerHTML = 
+                        '<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">인증 토큰이 없습니다. 다시 로그인해주세요.</td></tr>';
                     return;
                 }
 
                 // Build query string
                 let queryString = `?limit=${limit}&offset=${currentOffset}`;
-                if (startDate) queryString += `&start_date=${startDate}`;
-                if (endDate) queryString += `&end_date=${endDate}`;
+                if (startDate) {
+                    // Add time to start date (00:00:00)
+                    queryString += `&start_date=${startDate}T00:00:00`;
+                }
+                if (endDate) {
+                    // Add time to end date (23:59:59)
+                    queryString += `&end_date=${endDate}T23:59:59`;
+                }
 
                 console.log('Loading sensor history:', moduleModuleId, queryString);
 
@@ -243,16 +256,34 @@
                     }
                 });
 
+                console.log('Response status:', response.status);
+
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || '센서 데이터를 불러올 수 없습니다.');
+                    console.error('Error response:', errorData);
+                    
+                    if (response.status === 404 && errorData.message === 'No sensor data found') {
+                        // No data is not an error, just show empty state
+                        document.getElementById('dataCount').textContent = '총 0개';
+                        document.getElementById('dataTableBody').innerHTML = 
+                            '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">해당 기간에 데이터가 없습니다.</td></tr>';
+                        calculateStatistics([]);
+                        if (sensorChart) {
+                            sensorChart.destroy();
+                            sensorChart = null;
+                        }
+                        document.getElementById('pagination').innerHTML = '';
+                        return;
+                    }
+                    
+                    throw new Error(errorData.message || `서버 오류 (${response.status})`);
                 }
 
                 const result = await response.json();
                 console.log('Sensor history result:', result);
 
                 const data = result.data || [];
-                const total = result.total || 0;
+                const total = result.total || result.count || data.length;
 
                 // Update data count
                 document.getElementById('dataCount').textContent = `총 ${total}개 (표시: ${data.length}개)`;
@@ -261,7 +292,15 @@
                 calculateStatistics(data);
 
                 // Update chart
-                updateChart(data);
+                if (data.length > 0) {
+                    updateChart(data);
+                } else {
+                    // Destroy chart if no data
+                    if (sensorChart) {
+                        sensorChart.destroy();
+                        sensorChart = null;
+                    }
+                }
 
                 // Update table
                 updateTable(data);
@@ -272,7 +311,23 @@
             } catch (err) {
                 console.error('센서 데이터 로드 실패:', err);
                 document.getElementById('dataTableBody').innerHTML = 
-                    '<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">데이터를 불러오는데 실패했습니다.</td></tr>';
+                    `<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">오류: ${err.message || '데이터를 불러오는데 실패했습니다.'}</td></tr>`;
+                
+                // Clear statistics on error
+                document.getElementById('tempAvg').textContent = '--';
+                document.getElementById('tempMax').textContent = '--';
+                document.getElementById('tempMin').textContent = '--';
+                document.getElementById('humidityAvg').textContent = '--';
+                document.getElementById('humidityMax').textContent = '--';
+                document.getElementById('humidityMin').textContent = '--';
+                
+                // Destroy chart on error
+                if (sensorChart) {
+                    sensorChart.destroy();
+                    sensorChart = null;
+                }
+                
+                document.getElementById('pagination').innerHTML = '';
             }
         }
 
@@ -314,10 +369,27 @@
         }
 
         function updateChart(data) {
-            const ctx = document.getElementById('sensorChart').getContext('2d');
+            if (!data || data.length === 0) {
+                if (sensorChart) {
+                    sensorChart.destroy();
+                    sensorChart = null;
+                }
+                return;
+            }
+
+            const ctx = document.getElementById('sensorChart');
+            if (!ctx) {
+                console.error('Chart canvas not found');
+                return;
+            }
+
+            // Sort data by created_at (oldest first for chart)
+            const sortedData = [...data].sort((a, b) => {
+                return new Date(a.created_at) - new Date(b.created_at);
+            });
 
             // Prepare data for chart
-            const labels = data.map(d => {
+            const labels = sortedData.map(d => {
                 const date = new Date(d.created_at);
                 return date.toLocaleString('ko-KR', { 
                     month: 'short', 
@@ -325,10 +397,17 @@
                     hour: '2-digit', 
                     minute: '2-digit' 
                 });
-            }).reverse();
+            });
 
-            const tempData = data.map(d => parseFloat(d.temperature) || null).reverse();
-            const humidityData = data.map(d => parseFloat(d.humidity) || null).reverse();
+            const tempData = sortedData.map(d => {
+                const val = parseFloat(d.temperature);
+                return isNaN(val) ? null : val;
+            });
+            
+            const humidityData = sortedData.map(d => {
+                const val = parseFloat(d.humidity);
+                return isNaN(val) ? null : val;
+            });
 
             // Destroy existing chart if it exists
             if (sensorChart) {
@@ -346,7 +425,8 @@
                             borderColor: 'rgb(59, 130, 246)',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             tension: 0.4,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            fill: false
                         },
                         {
                             label: '습도 (%)',
@@ -354,7 +434,8 @@
                             borderColor: 'rgb(34, 197, 94)',
                             backgroundColor: 'rgba(34, 197, 94, 0.1)',
                             tension: 0.4,
-                            yAxisID: 'y1'
+                            yAxisID: 'y1',
+                            fill: false
                         }
                     ]
                 },
@@ -376,6 +457,13 @@
                         }
                     },
                     scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '시간'
+                            }
+                        },
                         y: {
                             type: 'linear',
                             display: true,
@@ -405,15 +493,17 @@
         function updateTable(data) {
             const tbody = document.getElementById('dataTableBody');
             
-            if (data.length === 0) {
+            if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">데이터가 없습니다.</td></tr>';
                 return;
             }
 
-            // Reverse to show latest first
-            const reversedData = [...data].reverse();
+            // Sort by created_at (latest first for table)
+            const sortedData = [...data].sort((a, b) => {
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
             
-            tbody.innerHTML = reversedData.map(d => {
+            tbody.innerHTML = sortedData.map(d => {
                 const date = new Date(d.created_at);
                 const timeStr = date.toLocaleString('ko-KR', {
                     year: 'numeric',
@@ -424,14 +514,27 @@
                     second: '2-digit'
                 });
                 
-                const temp = d.temperature !== null && d.temperature !== undefined ? parseFloat(d.temperature).toFixed(1) : '--';
-                const humidity = d.humidity !== null && d.humidity !== undefined ? parseFloat(d.humidity).toFixed(1) : '--';
+                let temp = '--';
+                if (d.temperature !== null && d.temperature !== undefined) {
+                    const tempVal = parseFloat(d.temperature);
+                    if (!isNaN(tempVal)) {
+                        temp = tempVal.toFixed(1);
+                    }
+                }
+                
+                let humidity = '--';
+                if (d.humidity !== null && d.humidity !== undefined) {
+                    const humidityVal = parseFloat(d.humidity);
+                    if (!isNaN(humidityVal)) {
+                        humidity = humidityVal.toFixed(1);
+                    }
+                }
                 
                 return `
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                         <td class="px-4 py-3">${timeStr}</td>
-                        <td class="px-4 py-3">${temp}°C</td>
-                        <td class="px-4 py-3">${humidity}%</td>
+                        <td class="px-4 py-3">${temp}${temp !== '--' ? '°C' : ''}</td>
+                        <td class="px-4 py-3">${humidity}${humidity !== '--' ? '%' : ''}</td>
                     </tr>
                 `;
             }).join('');
@@ -471,6 +574,17 @@
             currentOffset = (page - 1) * pageSize;
             loadData();
         }
+
+        // Reset pagination when filters change
+        document.getElementById('startDate').addEventListener('change', () => {
+            currentOffset = 0;
+        });
+        document.getElementById('endDate').addEventListener('change', () => {
+            currentOffset = 0;
+        });
+        document.getElementById('dataLimit').addEventListener('change', () => {
+            currentOffset = 0;
+        });
 
         // Initialize
         loadUserInfo();

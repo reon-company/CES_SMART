@@ -204,9 +204,12 @@ public:
     String response = "";
     bool headerEnded = false;
     int statusCode = 0;
+    int contentLength = 0;
     
-    while (client.available()) {
-      String line = client.readStringUntil('\r');
+    // Read headers first
+    while (client.available() && !headerEnded) {
+      String line = client.readStringUntil('\n');
+      line.trim(); // Remove \r and whitespace
       
       // Check HTTP status line
       if (line.startsWith("HTTP/1.1 ")) {
@@ -214,23 +217,45 @@ public:
         if (LOG_LEVEL >= 1) {
           Serial.println(line);
         }
-      } else if (line.length() == 0 && !headerEnded) {
+      } 
+      // Check Content-Length header
+      else if (line.startsWith("Content-Length:")) {
+        contentLength = line.substring(15).toInt();
+      }
+      // Empty line indicates end of headers
+      else if (line.length() == 0) {
         headerEnded = true;
-        continue;
-      } else if (headerEnded) {
-        // Response body
-        response += line;
-      } else if (LOG_LEVEL >= 2) {
-        Serial.println(line);
+      }
+    }
+    
+    // Read response body
+    if (headerEnded && client.available()) {
+      // Read all available data as response body
+      unsigned long bodyTimeout = millis();
+      while (client.available() || (contentLength > 0 && response.length() < contentLength)) {
+        if (client.available()) {
+          char c = client.read();
+          response += c;
+        } else {
+          // Wait a bit for more data
+          if (millis() - bodyTimeout > 1000) {
+            break; // Timeout waiting for body
+          }
+          delay(10);
+        }
       }
     }
 
-    // Check if response is empty (404, 401 or other errors)
+    // Check if response is empty
+    response.trim(); // Remove any trailing whitespace
+    
     if (response.length() == 0) {
       Serial.print("Empty response (HTTP ");
       Serial.print(statusCode);
       Serial.println(")");
-      if (statusCode == 404) {
+      if (statusCode == 200) {
+        Serial.println("WARNING: 200 OK but empty body. Server may not be returning data.");
+      } else if (statusCode == 404) {
         Serial.println("ERROR: Module not found! Please register module in web dashboard.");
         Serial.print("Current MODULE_ID: ");
         Serial.println(MODULE_ID);
@@ -242,9 +267,13 @@ public:
       return false;
     }
 
-    if (LOG_LEVEL >= 2) {
-      Serial.print("Relay status response: ");
-      Serial.println(response);
+    if (LOG_LEVEL >= 1) {
+      Serial.print("Response length: ");
+      Serial.println(response.length());
+      if (LOG_LEVEL >= 2) {
+        Serial.print("Relay status response: ");
+        Serial.println(response);
+      }
     }
 
     // Parse JSON response

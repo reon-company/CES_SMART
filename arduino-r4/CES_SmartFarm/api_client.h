@@ -63,7 +63,8 @@ public:
     }
   }
 
-  bool sendSensorData(float waterLevel, float temperature, float doLevel, float phLevel, float lightLevel) {
+  // Send DHT11 sensor data (temperature and humidity)
+  bool sendSensorData(float temperature, float humidity) {
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("WiFi not connected!");
       return false;
@@ -72,11 +73,8 @@ public:
     // Create JSON payload
     StaticJsonDocument<200> doc;
     doc["module_id"] = String(MODULE_ID);
-    doc["water_level"] = waterLevel;
     doc["temperature"] = temperature;
-    doc["do_level"] = doLevel;
-    doc["ph_level"] = phLevel;
-    doc["light_level"] = lightLevel;
+    doc["humidity"] = humidity;
 
     String jsonPayload;
     serializeJson(doc, jsonPayload);
@@ -120,7 +118,8 @@ public:
     return true;
   }
 
-  bool getActuatorStatus(bool& waterPump, bool& airPump, bool& valve, bool& heater, bool& cooler) {
+  // Get relay status from server
+  bool getRelayStatus(bool& relayState) {
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("WiFi not connected!");
       return false;
@@ -167,8 +166,10 @@ public:
       }
     }
 
-    Serial.print("Actuator status response: ");
-    Serial.println(response);
+    if (LOG_LEVEL >= 2) {
+      Serial.print("Relay status response: ");
+      Serial.println(response);
+    }
 
     // Parse JSON response
     StaticJsonDocument<200> doc;
@@ -181,11 +182,17 @@ public:
       return false;
     }
     
-    waterPump = doc["water_pump"] | false;
-    airPump = doc["air_pump"] | false;
-    valve = doc["valve"] | false;
-    heater = doc["heater"] | false;
-    cooler = doc["cooler"] | false;
+    // Try different possible field names
+    if (doc.containsKey("relay")) {
+      relayState = doc["relay"] | false;
+    } else if (doc.containsKey("relay_state")) {
+      relayState = doc["relay_state"] | false;
+    } else if (doc.containsKey("state")) {
+      relayState = doc["state"] | false;
+    } else {
+      // Default: try first boolean field
+      relayState = false;
+    }
 
     client.stop();
     return true;

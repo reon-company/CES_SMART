@@ -32,7 +32,7 @@ if [ ! -f /etc/ssl/certs/ces-api.crt ]; then
     sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
         -keyout /etc/ssl/private/ces-api.key \
         -out /etc/ssl/certs/ces-api.crt \
-        -subj "/C=KR/ST=Seoul/L=Seoul/O=CES/CN=54.180.160.232"
+        -subj "/C=KR/ST=Seoul/L=Seoul/O=CES/CN=54.180.237.225"
     echo "   ✅ SSL 인증서 생성 완료"
 else
     echo "   ✅ SSL 인증서가 이미 존재합니다."
@@ -44,13 +44,13 @@ echo "4. Nginx 설정 파일 생성 중..."
 sudo tee /etc/nginx/sites-available/ces-api > /dev/null <<'EOF'
 server {
     listen 80;
-    server_name 54.180.160.232;
+    server_name 54.180.237.225;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl;
-    server_name 54.180.160.232;
+    server_name 54.180.237.225;
 
     ssl_certificate /etc/ssl/certs/ces-api.crt;
     ssl_certificate_key /etc/ssl/private/ces-api.key;
@@ -118,9 +118,9 @@ echo "   sudo ufw reload"
 echo ""
 echo "10. HTTPS 연결 테스트 중..."
 sleep 2
-if curl -k -s https://54.180.160.232/api/health > /dev/null; then
+if curl -k -s https://54.180.237.225/api/health > /dev/null; then
     echo "   ✅ HTTPS 연결 성공!"
-    curl -k https://54.180.160.232/api/health
+    curl -k https://54.180.237.225/api/health
 else
     echo "   ⚠️  HTTPS 연결 실패. 방화벽 설정을 확인하세요."
 fi
@@ -129,7 +129,7 @@ echo ""
 echo "=== 설정 완료 ==="
 echo ""
 echo "다음 단계:"
-echo "1. 프론트엔드의 api.js에서 API_BASE_URL을 'https://54.180.160.232'로 변경"
+echo "1. 프론트엔드의 api.js에서 API_BASE_URL을 'https://54.180.237.225'로 변경"
 echo "2. Git에 푸시하여 재배포"
 echo ""
 echo "참고: 자체 서명 인증서이므로 브라우저에서 경고가 표시될 수 있습니다."

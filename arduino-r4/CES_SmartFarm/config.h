@@ -17,18 +17,10 @@
 #define MODULE_ID "MODULE_001"  // 각 모듈마다 고유 ID 설정 필요
 
 // Sensor Pin Configuration
-#define WATER_LEVEL_PIN A0      // 워터 레벨 센서 (아날로그)
-#define TEMPERATURE_PIN 2       // DS18B20 온도 센서 (OneWire)
-#define DO_SENSOR_PIN A1        // DO 센서 (SEN0237-A, 0-3V)
-#define PH_SENSOR_PIN A2        // pH 센서
-#define LIGHT_SENSOR_PIN A3     // Grove Light Sensor v1.2
+#define DHT11_PIN 2             // DHT11 온도/습도 센서 (디지털 핀)
 
 // Actuator Pin Configuration (릴레이 모듈)
-#define WATER_PUMP_PIN 3
-#define AIR_PUMP_PIN 4
-#define VALVE_PIN 5
-#define HEATER_PIN 6
-#define COOLER_PIN 7
+#define RELAY_PIN 3              // 1채널 릴레이 모듈
 
 // Timing Configuration
 #define SENSOR_UPDATE_INTERVAL 30000  // 30초 (밀리초)

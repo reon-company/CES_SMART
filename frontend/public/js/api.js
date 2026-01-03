@@ -8,8 +8,8 @@ const getApiBaseUrl = () => {
         return 'http://localhost:3000';
     }
 
-    // 프로덕션: HTTPS 사용 (Nginx 리버스 프록시)
-    return 'https://54.180.237.225';
+    // 프로덕션: HTTP 사용 (HTTPS는 도메인 설정 후 적용)
+    return 'http://43.203.141.2';
 };
 
 const API_BASE_URL = getApiBaseUrl();

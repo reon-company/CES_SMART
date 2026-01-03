@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +8,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
         * {
             font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
     </style>
 </head>
+
 <body class="bg-gray-50 min-h-screen">
     <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
         <div class="container mx-auto px-4 py-6">
@@ -24,7 +27,8 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <span id="userEmail" class="text-sm">로딩 중...</span>
-                    <button onclick="auth.logout()" class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">
+                    <button onclick="auth.logout()"
+                        class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">
                         로그아웃
                     </button>
                 </div>
@@ -41,7 +45,8 @@
         <div class="mb-8">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-2xl font-semibold text-gray-700">모듈 목록</h3>
-                <button onclick="showAddModuleModal()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                <button onclick="showAddModuleModal()"
+                    class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
                     + 모듈 추가
                 </button>
             </div>
@@ -59,17 +64,21 @@
             <form id="addModuleForm" class="space-y-4">
                 <div>
                     <label class="block text-gray-700 text-sm font-semibold mb-2">모듈 이름</label>
-                    <input type="text" id="moduleName" required class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                    <input type="text" id="moduleName" required
+                        class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-semibold mb-2">MAC 주소</label>
-                    <input type="text" id="moduleMac" required placeholder="AA:BB:CC:DD:EE:FF" class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                    <input type="text" id="moduleMac" required placeholder="AA:BB:CC:DD:EE:FF"
+                        class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
                 </div>
                 <div class="flex space-x-4">
-                    <button type="submit" class="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
+                    <button type="submit"
+                        class="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
                         추가
                     </button>
-                    <button type="button" onclick="hideAddModuleModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition">
+                    <button type="button" onclick="hideAddModuleModal()"
+                        class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition">
                         취소
                     </button>
                 </div>
@@ -173,5 +182,5 @@
         loadModules();
     </script>
 </body>
-</html>
 
+</html>

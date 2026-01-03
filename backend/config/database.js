@@ -9,7 +9,12 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  // 연결 타임아웃 설정
+  acquireTimeout: 60000,
+  timeout: 60000
 });
 
 // Test database connection

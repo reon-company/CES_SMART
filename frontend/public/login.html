@@ -120,11 +120,41 @@
                 if (response.success) {
                     auth.setToken(response.token);
                     window.location.href = 'dashboard.html';
+                } else {
+                    showError(response.message || '로그인에 실패했습니다.');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '로그인';
                 }
             } catch (err) {
-                const message = err.response?.data?.message || '로그인에 실패했습니다.';
+                console.error('Login error:', err);
+                let message = '로그인에 실패했습니다.';
+                
+                if (err.response) {
+                    if (err.response.status === 0) {
+                        if (err.response.data && err.response.data.message && 
+                            err.response.data.message.includes('HTTPS')) {
+                            message = err.response.data.message;
+                            // HTTPS 설정 안내 페이지로 이동 옵션 제공
+                            setTimeout(() => {
+                                if (confirm('HTTPS 설정이 필요합니다. 안내 페이지를 보시겠습니까?')) {
+                                    window.open('HTTPS_NOTICE.html', '_blank');
+                                }
+                            }, 100);
+                        } else {
+                            message = '서버에 연결할 수 없습니다. 네트워크 연결을 확인하세요.';
+                        }
+                    } else if (err.response.data && err.response.data.message) {
+                        message = err.response.data.message;
+                    } else if (err.response.status === 401) {
+                        message = '이메일 또는 비밀번호가 올바르지 않습니다.';
+                    } else if (err.response.status === 500) {
+                        message = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+                    }
+                } else if (err.message) {
+                    message = err.message;
+                }
+                
                 showError(message);
-            } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = '로그인';
             }

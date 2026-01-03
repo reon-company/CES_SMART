@@ -30,6 +30,10 @@ class SensorData {
   }
 
   static async getHistory(moduleId, startDate, endDate, limit = 100, offset = 0) {
+    // LIMIT과 OFFSET은 파라미터로 바인딩할 수 없으므로 쿼리 문자열에 직접 포함
+    const safeLimit = parseInt(limit) || 100;
+    const safeOffset = parseInt(offset) || 0;
+    
     let query = 'SELECT * FROM sensor_data WHERE module_id = ?';
     const params = [moduleId];
 
@@ -42,8 +46,8 @@ class SensorData {
       params.push(endDate);
     }
 
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    // LIMIT과 OFFSET을 쿼리 문자열에 직접 포함 (SQL injection 방지를 위해 parseInt 사용)
+    query += ` ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`;
 
     const [rows] = await pool.execute(query, params);
     return rows;

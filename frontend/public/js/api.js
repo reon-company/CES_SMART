@@ -8,13 +8,11 @@ const getApiBaseUrl = () => {
         return 'http://localhost:3000';
     }
 
-    // 프로덕션: HTTPS 사용 (백엔드에 HTTPS 설정 필요)
-    // 백엔드에 HTTPS가 설정되면 https://54.180.160.232 사용
-    // 현재는 HTTP만 지원하므로 Mixed Content 오류 발생
-    // 해결: 백엔드에 Nginx + Let's Encrypt로 HTTPS 설정 필요
-    return 'https://54.180.160.232';  // HTTPS 설정 후 사용
-    // 임시로 HTTP 사용 (브라우저에서 차단됨):
-    // return 'http://54.180.160.232:3000';
+    // 프로덕션: HTTP 사용 (임시 - HTTPS 설정 전까지)
+    // HTTPS 페이지에서 HTTP API 호출 시 Mixed Content 오류 발생하지만,
+    // 최소한 에러 메시지는 표시됨
+    // TODO: 백엔드에 HTTPS 설정 후 https://54.180.160.232로 변경
+    return 'http://54.180.160.232:3000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -35,12 +33,24 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const url = `${API_BASE_URL}${endpoint}`;
+        console.log('API Request:', url, options);
+
+        const response = await fetch(url, {
             ...options,
             ...config,
         });
 
-        const data = await response.json();
+        // 응답이 JSON인지 확인
+        const contentType = response.headers.get('content-type');
+        let data;
+
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            throw new Error(`서버 응답 오류: ${text || response.statusText}`);
+        }
 
         if (!response.ok) {
             throw { response: { status: response.status, data } };
@@ -48,7 +58,46 @@ async function apiRequest(endpoint, options = {}) {
 
         return data;
     } catch (error) {
-        throw error;
+        console.error('API Error:', error);
+
+        // Mixed Content 오류 감지 (HTTPS 페이지에서 HTTP API 호출)
+        if (error instanceof TypeError && (
+            error.message.includes('fetch') ||
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('network')
+        )) {
+            // HTTPS 페이지에서 HTTP API 호출 시도 감지
+            if (window.location.protocol === 'https:' && API_BASE_URL.startsWith('http:')) {
+                throw {
+                    response: {
+                        status: 0,
+                        data: {
+                            message: 'HTTPS 보안 정책으로 인해 HTTP API를 호출할 수 없습니다. 백엔드 서버에 HTTPS 설정이 필요합니다.'
+                        }
+                    }
+                };
+            }
+
+            throw {
+                response: {
+                    status: 0,
+                    data: { message: '서버에 연결할 수 없습니다. 네트워크 연결을 확인하세요.' }
+                }
+            };
+        }
+
+        // 기존 에러 형식 유지
+        if (error.response) {
+            throw error;
+        }
+
+        // 기타 오류
+        throw {
+            response: {
+                status: 500,
+                data: { message: error.message || '알 수 없는 오류가 발생했습니다.' }
+            }
+        };
     }
 }
 

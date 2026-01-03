@@ -1,26 +1,51 @@
 const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err);
+  // 이미 응답이 전송된 경우
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  console.error('Error:', {
+    message: err.message,
+    code: err.code,
+    stack: err.stack,
+    url: req.url,
+    method: req.method
+  });
 
   // Default error
   let error = { ...err };
   error.message = err.message;
+  error.statusCode = err.statusCode || 500;
 
-  // MySQL duplicate entry error
+  // MySQL 오류 처리
   if (err.code === 'ER_DUP_ENTRY') {
-    const message = 'Duplicate entry found';
-    error = { message, statusCode: 400 };
+    error.message = 'Duplicate entry found';
+    error.statusCode = 400;
   }
 
-  // MySQL foreign key constraint error
   if (err.code === 'ER_NO_REFERENCED_ROW_2') {
-    const message = 'Referenced record not found';
-    error = { message, statusCode: 400 };
+    error.message = 'Referenced record not found';
+    error.statusCode = 400;
   }
 
-  res.status(error.statusCode || 500).json({
+  if (err.code === 'ER_WRONG_ARGUMENTS') {
+    error.message = 'Database query error';
+    error.statusCode = 500;
+  }
+
+  // 데이터베이스 연결 오류
+  if (err.code === 'ECONNREFUSED' || err.code === 'PROTOCOL_CONNECTION_LOST') {
+    error.message = 'Database connection error';
+    error.statusCode = 503;
+  }
+
+  res.status(error.statusCode).json({
     success: false,
     message: error.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: err.stack,
+      code: err.code 
+    })
   });
 };
 

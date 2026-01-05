@@ -63,8 +63,8 @@ public:
     }
   }
 
-  // Send DHT11 sensor data (temperature and humidity)
-  bool sendSensorData(float temperature, float humidity) {
+  // Send DHT11 sensor data (temperature, humidity, and relay status)
+  bool sendSensorData(float temperature, float humidity, bool relayState = false) {
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("WiFi not connected!");
       return false;
@@ -75,6 +75,7 @@ public:
     doc["module_id"] = String(MODULE_ID);
     doc["temperature"] = temperature;
     doc["humidity"] = humidity;
+    doc["relay"] = relayState;
 
     String jsonPayload;
     serializeJson(doc, jsonPayload);

@@ -55,6 +55,14 @@ const sensorDataValidation = [
     .optional()
     .isFloat()
     .withMessage('Temperature must be a valid number'),
+  body('humidity')
+    .optional()
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Humidity must be between 0 and 100'),
+  body('relay')
+    .optional()
+    .isBoolean()
+    .withMessage('Relay must be a boolean value'),
   body('do_level')
     .optional()
     .isFloat({ min: 0 })

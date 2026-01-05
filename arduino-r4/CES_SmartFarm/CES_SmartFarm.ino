@@ -294,6 +294,12 @@ void loop() {
     // Read DHT11 sensor
     float temperature = dht11Sensor->readTemperature();
     float humidity = dht11Sensor->readHumidity();
+    
+    // Get current relay state
+    bool relayState = false;
+    if (relay) {
+      relayState = relay->getState();
+    }
 
     // Print sensor values
     if (LOG_LEVEL >= 1) {
@@ -301,11 +307,12 @@ void loop() {
       Serial.print(temperature);
       Serial.print("C | Humidity: ");
       Serial.print(humidity);
-      Serial.println("%");
+      Serial.print("% | Relay: ");
+      Serial.println(relayState ? "ON" : "OFF");
     }
 
-    // Send data to server
-    if (apiClient.sendSensorData(temperature, humidity)) {
+    // Send data to server (including relay state)
+    if (apiClient.sendSensorData(temperature, humidity, relayState)) {
       if (LOG_LEVEL >= 1) {
         Serial.println("Sensor data sent");
       }

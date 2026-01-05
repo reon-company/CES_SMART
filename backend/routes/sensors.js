@@ -13,6 +13,9 @@ router.post('/', sensorDataValidation, validate, async (req, res) => {
   try {
     const { module_id, water_level, temperature, humidity, relay, do_level, ph_level, light_level } = req.body;
 
+    // Debug: Log received sensor data
+    console.log(`[SENSOR DATA] Module: ${module_id}, Temp: ${temperature}, Humidity: ${humidity}, Relay: ${relay} (type: ${typeof relay})`);
+
     // Verify module exists
     const module = await Module.findByModuleId(module_id);
     if (!module) {
@@ -32,6 +35,8 @@ router.post('/', sensorDataValidation, validate, async (req, res) => {
       ph_level,
       light_level
     });
+
+    console.log(`[SENSOR DATA] Saved with ID: ${dataId}, Relay value: ${relay}`);
 
     res.status(201).json({
       success: true,

@@ -2,6 +2,20 @@ const pool = require('../config/database');
 
 class SensorData {
   static async create(moduleId, data) {
+    // Convert relay to proper boolean value (handle both boolean and string)
+    let relayValue = null;
+    if (data.relay !== undefined && data.relay !== null) {
+      if (typeof data.relay === 'boolean') {
+        relayValue = data.relay ? 1 : 0;
+      } else if (typeof data.relay === 'string') {
+        relayValue = (data.relay === 'true' || data.relay === '1') ? 1 : 0;
+      } else if (typeof data.relay === 'number') {
+        relayValue = data.relay ? 1 : 0;
+      } else {
+        relayValue = Boolean(data.relay) ? 1 : 0;
+      }
+    }
+
     const [result] = await pool.execute(
       `INSERT INTO sensor_data 
        (module_id, water_level, temperature, humidity, relay, do_level, ph_level, light_level) 
@@ -11,7 +25,7 @@ class SensorData {
         data.water_level || null,
         data.temperature || null,
         data.humidity || null,
-        data.relay !== undefined ? (data.relay ? 1 : 0) : null,
+        relayValue,
         data.do_level || null,
         data.ph_level || null,
         data.light_level || null

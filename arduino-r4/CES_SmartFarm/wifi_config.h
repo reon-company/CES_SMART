@@ -395,19 +395,58 @@ public:
         Serial.println(client.remoteIP());
         Serial.println("========================================");
         String request = "";
+        bool headersComplete = false;
+        int contentLength = 0;
         
+        // 헤더 읽기
         while (client.connected()) {
           if (client.available()) {
             char c = client.read();
             request += c;
             
+            // Content-Length 찾기
+            if (request.indexOf("Content-Length:") != -1) {
+              int clStart = request.indexOf("Content-Length:") + 15;
+              int clEnd = request.indexOf("\r\n", clStart);
+              if (clEnd != -1) {
+                String clStr = request.substring(clStart, clEnd);
+                clStr.trim();
+                contentLength = clStr.toInt();
+              }
+            }
+            
+            // 헤더 끝 확인 (\r\n\r\n)
             if (request.endsWith("\r\n\r\n")) {
+              headersComplete = true;
               break;
             }
           }
         }
         
+        // POST 요청인 경우 본문 읽기
+        if (request.indexOf("POST") != -1 && contentLength > 0) {
+          Serial.print("POST 본문 읽기 중... (길이: ");
+          Serial.print(contentLength);
+          Serial.println(")");
+          
+          // 남은 본문 데이터 읽기
+          int bytesRead = 0;
+          while (client.connected() && bytesRead < contentLength) {
+            if (client.available()) {
+              char c = client.read();
+              request += c;
+              bytesRead++;
+            }
+          }
+          Serial.print("본문 읽기 완료: ");
+          Serial.print(bytesRead);
+          Serial.println(" bytes");
+        }
+        
+        Serial.println("========================================");
+        Serial.println("전체 요청:");
         Serial.println(request);
+        Serial.println("========================================");
         
         // 설정 페이지 HTML
         if (request.indexOf("GET / ") != -1 || request.indexOf("GET /index") != -1) {
@@ -465,6 +504,13 @@ public:
           Serial.println("EEPROM 초기화 요청 받음");
           Serial.println("========================================");
           
+          // 먼저 응답 헤더 전송
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/html");
+          client.println("Connection: close");
+          client.println();
+          client.flush();
+          
           reset();
           
           Serial.println("✅ EEPROM 초기화 완료!");
@@ -472,10 +518,6 @@ public:
           Serial.println("========================================");
           
           // 성공 페이지
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connection: close");
-          client.println();
           client.println("<!DOCTYPE HTML>");
           client.println("<html><head><meta charset='UTF-8'>");
           client.println("<title>초기화 완료</title>");
@@ -485,49 +527,78 @@ public:
           client.println("<p>저장된 WiFi 정보가 삭제되었습니다.</p>");
           client.println("<p><a href='/'>설정 페이지로 돌아가기</a></p>");
           client.println("</body></html>");
+          client.flush();
           
           delay(500);
           client.stop();
+          Serial.println("클라이언트 연결 종료");
         }
         // 설정 저장 처리
         else if (request.indexOf("POST /save") != -1) {
+          Serial.println();
+          Serial.println("========================================");
+          Serial.println("POST /save 요청 처리 시작");
+          Serial.println("========================================");
+          
+          // 먼저 응답 헤더 전송 (클라이언트 타임아웃 방지)
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/html");
+          client.println("Connection: close");
+          client.println();
+          client.flush();
+          
           // POST 데이터 파싱
-          int ssidStart = request.indexOf("ssid=");
-          int passwordStart = request.indexOf("password=");
+          int bodyStart = request.indexOf("\r\n\r\n");
+          String body = "";
+          if (bodyStart != -1) {
+            body = request.substring(bodyStart + 4);
+          }
+          
+          Serial.print("POST 본문: ");
+          Serial.println(body);
+          
+          int ssidStart = body.indexOf("ssid=");
+          int passwordStart = body.indexOf("password=");
           
           if (ssidStart != -1 && passwordStart != -1) {
             String newSSID = "";
             String newPassword = "";
             
             // SSID 추출
-            int ssidEnd = request.indexOf("&", ssidStart);
-            if (ssidEnd == -1) ssidEnd = request.indexOf(" ", ssidStart);
-            newSSID = request.substring(ssidStart + 5, ssidEnd);
+            int ssidEnd = body.indexOf("&", ssidStart);
+            if (ssidEnd == -1) ssidEnd = body.length();
+            newSSID = body.substring(ssidStart + 5, ssidEnd);
             newSSID.replace("+", " ");
             newSSID.replace("%20", " ");
             
             // Password 추출
-            int passwordEnd = request.indexOf("&", passwordStart);
-            if (passwordEnd == -1) passwordEnd = request.indexOf(" ", passwordStart);
-            newPassword = request.substring(passwordStart + 9, passwordEnd);
+            int passwordEnd = body.indexOf("&", passwordStart);
+            if (passwordEnd == -1) passwordEnd = body.length();
+            newPassword = body.substring(passwordStart + 9, passwordEnd);
             newPassword.replace("+", " ");
             newPassword.replace("%20", " ");
             
             // URL 디코딩 (간단한 버전)
             newSSID.replace("%21", "!");
             newSSID.replace("%40", "@");
+            newSSID.replace("%2B", "+");
             newPassword.replace("%21", "!");
             newPassword.replace("%40", "@");
+            newPassword.replace("%2B", "+");
             
-            // 설정 저장
+            Serial.print("파싱된 SSID: \"");
+            Serial.print(newSSID);
+            Serial.println("\"");
+            Serial.print("파싱된 Password 길이: ");
+            Serial.println(newPassword.length());
+            
+            // 설정 저장 (빠르게 처리)
+            Serial.println("EEPROM에 저장 중...");
             save(newSSID, newPassword);
             
             if (!configured) {
               // 저장 실패
-              client.println("HTTP/1.1 200 OK");
-              client.println("Content-Type: text/html");
-              client.println("Connection: close");
-              client.println();
+              Serial.println("❌ EEPROM 저장 실패!");
               client.println("<!DOCTYPE HTML>");
               client.println("<html><head><meta charset='UTF-8'>");
               client.println("<title>설정 실패</title>");
@@ -535,11 +606,13 @@ public:
               client.println("h1 { color: #f44336; }</style></head>");
               client.println("<body><h1>❌ 설정 저장 실패</h1>");
               client.println("<p>EEPROM에 저장하는데 실패했습니다.</p>");
-              client.println("<p>다시 시도해주세요.</p>");
+              client.println("<p><a href='/'>다시 시도</a></p>");
               client.println("</body></html>");
-              delay(1000);
+              client.flush();
+              delay(100);
               client.stop();
-              return;
+              Serial.println("클라이언트 연결 종료");
+              continue; // 다음 요청 대기
             }
             
             Serial.println();
@@ -548,13 +621,8 @@ public:
             Serial.print("저장된 SSID: ");
             Serial.println(newSSID);
             Serial.println("========================================");
-            Serial.println();
             
-            // 성공 페이지
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-Type: text/html");
-            client.println("Connection: close");
-            client.println();
+            // 성공 페이지 (이미 헤더는 전송됨)
             client.println("<!DOCTYPE HTML>");
             client.println("<html><head><meta charset='UTF-8'>");
             client.println("<title>설정 완료</title>");
@@ -564,11 +632,17 @@ public:
             client.println("<p>아두이노가 저장된 WiFi에 연결을 시도합니다.</p>");
             client.println("<p>잠시만 기다려주세요...</p>");
             client.println("</body></html>");
+            client.flush();
             
             // 클라이언트 응답 완료 대기
             delay(500);
             client.stop();
+            Serial.println("클라이언트 연결 종료");
             
+            // 잠시 대기 후 WiFi 연결 시도
+            delay(2000);
+            
+            Serial.println();
             Serial.println("설정 포털 종료. WiFi 연결 시도...");
             Serial.println("AP 모드 종료 중...");
             
@@ -588,13 +662,13 @@ public:
             Serial.println("저장된 WiFi로 연결 시도 중...");
             if (connect()) {
               Serial.println("✅ WiFi 연결 성공! 설정 포털을 종료합니다.");
+              return; // 연결 성공, 설정 포털 종료
             } else {
               Serial.println("❌ WiFi 연결 실패. 설정 포털을 다시 시작합니다.");
               delay(2000);
               startConfigPortal(); // 연결 실패 시 다시 설정 포털 시작
+              return;
             }
-            
-            return; // 설정 완료, 루프 종료
           }
         }
         

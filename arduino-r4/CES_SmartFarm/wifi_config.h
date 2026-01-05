@@ -84,11 +84,37 @@ public:
       ssid = readStringFromEEPROM(EEPROM_SSID_ADDR, 64);
       password = readStringFromEEPROM(EEPROM_PASSWORD_ADDR, 64);
       
+      // 디버깅: 읽은 값 출력
+      Serial.println("========================================");
+      Serial.println("EEPROM에서 WiFi 설정 읽기:");
+      Serial.print("  configured flag: ");
+      Serial.println(configFlag);
+      Serial.print("  SSID: \"");
+      Serial.print(ssid);
+      Serial.println("\"");
+      Serial.print("  SSID length: ");
+      Serial.println(ssid.length());
+      Serial.print("  Password length: ");
+      Serial.println(password.length());
+      
+      // EEPROM 원시 데이터 확인 (처음 20바이트)
+      Serial.print("  EEPROM 원시 데이터 (SSID 영역, 처음 20바이트): ");
+      for (int i = 0; i < 20; i++) {
+        uint8_t val = EEPROM.read(EEPROM_SSID_ADDR + i);
+        Serial.print(val, HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+      Serial.println("========================================");
+      
       // Validate: if SSID is empty, treat as not configured
       if (ssid.length() == 0) {
+        Serial.println("⚠️ SSID가 비어있음. configured를 false로 설정");
         configured = false;
         password = "";
       }
+    } else {
+      Serial.println("EEPROM에 WiFi 설정이 없음 (configured flag = 0)");
     }
   }
   
@@ -163,19 +189,68 @@ public:
   
   // 설정 초기화 (EEPROM 영역 완전 삭제)
   void reset() {
-    Serial.println("EEPROM WiFi 설정 초기화 중...");
+    Serial.println();
+    Serial.println("========================================");
+    Serial.println("EEPROM WiFi 설정 초기화 시작");
+    Serial.println("========================================");
+    
     configured = false;
     ssid = "";
     password = "";
     
-    // EEPROM 영역을 0으로 완전 초기화
+    // EEPROM 영역을 0xFF로 완전 초기화 (더 확실한 삭제)
+    Serial.println("EEPROM SSID 영역 초기화 중...");
+    for (int i = 0; i < 64; i++) {
+      EEPROM.write(EEPROM_SSID_ADDR + i, 0xFF);
+    }
+    delay(50);
+    
+    Serial.println("EEPROM Password 영역 초기화 중...");
+    for (int i = 0; i < 64; i++) {
+      EEPROM.write(EEPROM_PASSWORD_ADDR + i, 0xFF);
+    }
+    delay(50);
+    
+    Serial.println("EEPROM configured flag 초기화 중...");
+    EEPROM.write(EEPROM_CONFIGURED_ADDR, 0);
+    delay(50);
+    
+    // 다시 0으로 덮어쓰기 (0xFF는 읽기 시 중단되도록)
+    Serial.println("EEPROM 영역을 0으로 덮어쓰기 중...");
     for (int i = 0; i < 64; i++) {
       EEPROM.write(EEPROM_SSID_ADDR + i, 0);
       EEPROM.write(EEPROM_PASSWORD_ADDR + i, 0);
     }
     EEPROM.write(EEPROM_CONFIGURED_ADDR, 0);
-    delay(50); // EEPROM 쓰기 완료 대기
-    Serial.println("✅ EEPROM 초기화 완료");
+    delay(100); // EEPROM 쓰기 완료 대기
+    
+    // 검증: 읽어서 확인
+    Serial.println("EEPROM 초기화 검증 중...");
+    String verifySSID = readStringFromEEPROM(EEPROM_SSID_ADDR, 64);
+    uint8_t verifyFlag = EEPROM.read(EEPROM_CONFIGURED_ADDR);
+    
+    Serial.print("검증된 SSID: \"");
+    Serial.print(verifySSID);
+    Serial.println("\"");
+    Serial.print("검증된 SSID 길이: ");
+    Serial.println(verifySSID.length());
+    Serial.print("검증된 configured flag: ");
+    Serial.println(verifyFlag);
+    
+    if (verifySSID.length() == 0 && verifyFlag == 0) {
+      Serial.println("✅ EEPROM 초기화 완료 및 검증 성공!");
+    } else {
+      Serial.println("⚠️ EEPROM 초기화 검증 실패. 다시 시도...");
+      // 다시 초기화
+      for (int i = 0; i < 64; i++) {
+        EEPROM.write(EEPROM_SSID_ADDR + i, 0);
+        EEPROM.write(EEPROM_PASSWORD_ADDR + i, 0);
+      }
+      EEPROM.write(EEPROM_CONFIGURED_ADDR, 0);
+      delay(100);
+    }
+    
+    Serial.println("========================================");
   }
   
   String getSSID() { return ssid; }
@@ -356,14 +431,63 @@ public:
           client.println("<div class='container'>");
           client.println("<h1>🌱 CES SmartFarm</h1>");
           client.println("<h2>WiFi 설정</h2>");
+          
+          // 현재 저장된 WiFi 정보 표시
+          loadFromEEPROM();
+          if (isConfigured()) {
+            client.println("<div style='background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 20px;'>");
+            client.println("<strong>현재 저장된 WiFi:</strong><br>");
+            client.print("SSID: ");
+            client.println(getSSID());
+            client.println("</div>");
+          }
+          
           client.println("<form method='POST' action='/save'>");
           client.println("<label>WiFi 이름 (SSID):</label>");
-          client.println("<input type='text' name='ssid' required>");
+          client.println("<input type='text' name='ssid' required placeholder='새 WiFi 이름 입력'>");
           client.println("<label>WiFi 비밀번호:</label>");
-          client.println("<input type='password' name='password' required>");
+          client.println("<input type='password' name='password' required placeholder='WiFi 비밀번호 입력'>");
           client.println("<button type='submit'>설정 저장</button>");
           client.println("</form>");
+          
+          // EEPROM 초기화 버튼 추가
+          client.println("<hr style='margin: 20px 0;'>");
+          client.println("<form method='POST' action='/reset' onsubmit='return confirm(\"정말로 EEPROM을 초기화하시겠습니까?\");'>");
+          client.println("<button type='submit' style='background: #f44336;'>EEPROM 초기화 (저장된 WiFi 삭제)</button>");
+          client.println("</form>");
+          
           client.println("</div></body></html>");
+        }
+        // EEPROM 초기화 처리
+        else if (request.indexOf("POST /reset") != -1) {
+          Serial.println();
+          Serial.println("========================================");
+          Serial.println("EEPROM 초기화 요청 받음");
+          Serial.println("========================================");
+          
+          reset();
+          
+          Serial.println("✅ EEPROM 초기화 완료!");
+          Serial.println("설정 포털을 계속 실행합니다...");
+          Serial.println("========================================");
+          
+          // 성공 페이지
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/html");
+          client.println("Connection: close");
+          client.println();
+          client.println("<!DOCTYPE HTML>");
+          client.println("<html><head><meta charset='UTF-8'>");
+          client.println("<title>초기화 완료</title>");
+          client.println("<style>body { font-family: Arial; text-align: center; margin-top: 100px; }");
+          client.println("h1 { color: #4CAF50; }</style></head>");
+          client.println("<body><h1>✅ EEPROM 초기화 완료!</h1>");
+          client.println("<p>저장된 WiFi 정보가 삭제되었습니다.</p>");
+          client.println("<p><a href='/'>설정 페이지로 돌아가기</a></p>");
+          client.println("</body></html>");
+          
+          delay(500);
+          client.stop();
         }
         // 설정 저장 처리
         else if (request.indexOf("POST /save") != -1) {

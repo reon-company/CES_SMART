@@ -17,19 +17,34 @@ private:
   String password;
   bool configured;
   
-  // EEPROM에서 문자열 읽기
+  // EEPROM에서 문자열 읽기 (0 또는 255를 만나면 중단)
   String readStringFromEEPROM(int address, int maxLength) {
     String str = "";
     for (int i = 0; i < maxLength; i++) {
       char c = EEPROM.read(address + i);
+      // 0 또는 255 (초기화되지 않은 값)를 만나면 중단
       if (c == 0 || c == 255) break;
-      str += c;
+      // 유효한 ASCII 문자만 추가 (32-126 범위)
+      if (c >= 32 && c <= 126) {
+        str += c;
+      } else {
+        // 유효하지 않은 문자를 만나면 중단
+        break;
+      }
     }
     return str;
   }
   
-  // EEPROM에 문자열 쓰기
+  // EEPROM에 문자열 쓰기 (이전 값 완전 삭제 후 쓰기)
   void writeStringToEEPROM(int address, String str, int maxLength) {
+    // 먼저 전체 영역을 0으로 초기화 (이전 값 완전 삭제)
+    for (int i = 0; i < maxLength; i++) {
+      EEPROM.write(address + i, 0);
+    }
+    // 약간의 지연 (EEPROM 쓰기 완료 대기)
+    delay(10);
+    
+    // 새 문자열 쓰기
     for (int i = 0; i < maxLength; i++) {
       if (i < str.length()) {
         EEPROM.write(address + i, str.charAt(i));
@@ -37,6 +52,8 @@ private:
         EEPROM.write(address + i, 0);
       }
     }
+    // EEPROM 쓰기 완료 대기
+    delay(10);
   }
 
 public:
@@ -75,57 +92,90 @@ public:
     }
   }
   
-  // 설정 저장
+  // 설정 저장 (이전 값 완전 삭제 후 저장)
   void save(String newSSID, String newPassword) {
-    // 기존 설정 초기화 (이전 값이 남지 않도록)
-    reset();
-    delay(100);
+    Serial.println();
+    Serial.println("========================================");
+    Serial.println("EEPROM에 WiFi 설정 저장 중...");
+    Serial.print("새 SSID: ");
+    Serial.println(newSSID);
+    Serial.print("SSID 길이: ");
+    Serial.println(newSSID.length());
+    Serial.println("========================================");
     
-    // 새 설정 저장
-    ssid = newSSID;
-    password = newPassword;
-    
-    // EEPROM에 저장 (기존 데이터 덮어쓰기)
-    writeStringToEEPROM(EEPROM_SSID_ADDR, ssid, 64);
-    writeStringToEEPROM(EEPROM_PASSWORD_ADDR, password, 64);
-    EEPROM.write(EEPROM_CONFIGURED_ADDR, 1);
-    
-    // Arduino R4 WiFi는 EEPROM이 자동 저장되지만, 명시적으로 확인
-    // EEPROM 업데이트를 위해 약간의 지연
-    delay(200);
-    
-    configured = true;
-    
-    // 저장 확인: EEPROM에서 다시 읽어서 검증
-    String verifySSID = readStringFromEEPROM(EEPROM_SSID_ADDR, 64);
-    if (verifySSID != ssid) {
-      Serial.println("⚠️ EEPROM 저장 검증 실패! 다시 시도...");
-      // 다시 저장 시도
-      writeStringToEEPROM(EEPROM_SSID_ADDR, ssid, 64);
-      writeStringToEEPROM(EEPROM_PASSWORD_ADDR, password, 64);
-      EEPROM.write(EEPROM_CONFIGURED_ADDR, 1);
-      delay(200);
-    }
-    
-    Serial.print("✅ EEPROM 저장 완료: SSID=");
-    Serial.println(ssid);
-  }
-  
-  // 설정 초기화
-  void reset() {
-    configured = false;
-    ssid = "";
-    password = "";
-    
-    // EEPROM 영역을 0으로 초기화 (이전 값 완전 삭제)
+    // 먼저 EEPROM 영역을 완전히 초기화
+    Serial.println("이전 EEPROM 데이터 삭제 중...");
     for (int i = 0; i < 64; i++) {
       EEPROM.write(EEPROM_SSID_ADDR + i, 0);
       EEPROM.write(EEPROM_PASSWORD_ADDR + i, 0);
     }
     EEPROM.write(EEPROM_CONFIGURED_ADDR, 0);
+    delay(50); // EEPROM 쓰기 완료 대기
     
-    // Arduino R4에서는 commit()이 필요 없음 (자동 저장됨)
-    delay(100); // EEPROM 쓰기 완료 대기
+    // 새 설정 저장
+    ssid = newSSID;
+    password = newPassword;
+    
+    Serial.println("새 WiFi 정보를 EEPROM에 저장 중...");
+    writeStringToEEPROM(EEPROM_SSID_ADDR, ssid, 64);
+    writeStringToEEPROM(EEPROM_PASSWORD_ADDR, password, 64);
+    EEPROM.write(EEPROM_CONFIGURED_ADDR, 1);
+    delay(50); // EEPROM 쓰기 완료 대기
+    
+    // 저장 검증: EEPROM에서 다시 읽어서 확인
+    Serial.println("EEPROM 저장 검증 중...");
+    String verifySSID = readStringFromEEPROM(EEPROM_SSID_ADDR, 64);
+    String verifyPassword = readStringFromEEPROM(EEPROM_PASSWORD_ADDR, 64);
+    
+    Serial.print("검증된 SSID: ");
+    Serial.println(verifySSID);
+    Serial.print("검증된 SSID 길이: ");
+    Serial.println(verifySSID.length());
+    
+    if (verifySSID == ssid) {
+      Serial.println("✅ EEPROM 저장 검증 성공!");
+      configured = true;
+    } else {
+      Serial.println("❌ EEPROM 저장 검증 실패! 다시 시도...");
+      // 다시 저장 시도
+      for (int i = 0; i < 64; i++) {
+        EEPROM.write(EEPROM_SSID_ADDR + i, 0);
+        EEPROM.write(EEPROM_PASSWORD_ADDR + i, 0);
+      }
+      delay(50);
+      writeStringToEEPROM(EEPROM_SSID_ADDR, ssid, 64);
+      writeStringToEEPROM(EEPROM_PASSWORD_ADDR, password, 64);
+      EEPROM.write(EEPROM_CONFIGURED_ADDR, 1);
+      delay(50);
+      
+      // 다시 검증
+      verifySSID = readStringFromEEPROM(EEPROM_SSID_ADDR, 64);
+      if (verifySSID == ssid) {
+        Serial.println("✅ 재시도 후 EEPROM 저장 검증 성공!");
+        configured = true;
+      } else {
+        Serial.println("❌ EEPROM 저장 실패! 설정 포털을 다시 시작합니다.");
+        configured = false;
+      }
+    }
+    Serial.println("========================================");
+  }
+  
+  // 설정 초기화 (EEPROM 영역 완전 삭제)
+  void reset() {
+    Serial.println("EEPROM WiFi 설정 초기화 중...");
+    configured = false;
+    ssid = "";
+    password = "";
+    
+    // EEPROM 영역을 0으로 완전 초기화
+    for (int i = 0; i < 64; i++) {
+      EEPROM.write(EEPROM_SSID_ADDR + i, 0);
+      EEPROM.write(EEPROM_PASSWORD_ADDR + i, 0);
+    }
+    EEPROM.write(EEPROM_CONFIGURED_ADDR, 0);
+    delay(50); // EEPROM 쓰기 완료 대기
+    Serial.println("✅ EEPROM 초기화 완료");
   }
   
   String getSSID() { return ssid; }
@@ -348,6 +398,26 @@ public:
             // 설정 저장
             save(newSSID, newPassword);
             
+            if (!configured) {
+              // 저장 실패
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-Type: text/html");
+              client.println("Connection: close");
+              client.println();
+              client.println("<!DOCTYPE HTML>");
+              client.println("<html><head><meta charset='UTF-8'>");
+              client.println("<title>설정 실패</title>");
+              client.println("<style>body { font-family: Arial; text-align: center; margin-top: 100px; }");
+              client.println("h1 { color: #f44336; }</style></head>");
+              client.println("<body><h1>❌ 설정 저장 실패</h1>");
+              client.println("<p>EEPROM에 저장하는데 실패했습니다.</p>");
+              client.println("<p>다시 시도해주세요.</p>");
+              client.println("</body></html>");
+              delay(1000);
+              client.stop();
+              return;
+            }
+            
             Serial.println();
             Serial.println("========================================");
             Serial.println("✅ WiFi 설정 저장 완료!");
@@ -368,7 +438,7 @@ public:
             client.println("h1 { color: #4CAF50; }</style></head>");
             client.println("<body><h1>✅ 설정이 저장되었습니다!</h1>");
             client.println("<p>아두이노가 저장된 WiFi에 연결을 시도합니다.</p>");
-            client.println("<p>잠시 후 페이지를 새로고침하세요.</p>");
+            client.println("<p>잠시만 기다려주세요...</p>");
             client.println("</body></html>");
             
             // 클라이언트 응답 완료 대기
@@ -381,6 +451,14 @@ public:
             // AP 모드 종료
             WiFi.disconnect();
             delay(1000);
+            
+            // EEPROM에서 새로 로드 (저장된 값 확인)
+            Serial.println("EEPROM에서 저장된 설정 다시 로드 중...");
+            loadFromEEPROM();
+            Serial.print("로드된 SSID: ");
+            Serial.println(ssid);
+            Serial.print("로드된 SSID 길이: ");
+            Serial.println(ssid.length());
             
             // 저장된 WiFi로 연결 시도
             Serial.println("저장된 WiFi로 연결 시도 중...");

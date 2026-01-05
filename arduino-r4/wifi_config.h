@@ -44,7 +44,7 @@ public:
     // Arduino R4에서는 EEPROM이 자동으로 초기화됨
     // begin()이 필요 없는 경우도 있지만, 호환성을 위해 유지
     #ifdef EEPROM_SIZE
-      EEPROM.begin(EEPROM_SIZE);
+    EEPROM.begin(EEPROM_SIZE);
     #endif
     loadFromEEPROM();
   }

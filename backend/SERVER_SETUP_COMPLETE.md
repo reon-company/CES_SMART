@@ -122,3 +122,4 @@ sudo tail -f /var/log/nginx/error.log
 
 서버가 정상적으로 설정되었습니다. 이제 프론트엔드에서 API를 호출할 수 있습니다.
 
+

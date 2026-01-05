@@ -192,3 +192,4 @@ sudo systemctl status certbot.timer
 
 - 방화벽에서 포트 443이 열려있는지 확인
 - 서버에서 백엔드가 실행 중인지 확인: `pm2 status`
+

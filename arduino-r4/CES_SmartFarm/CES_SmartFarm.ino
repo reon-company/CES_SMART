@@ -118,25 +118,37 @@ void setup() {
   
   // Try EEPROM stored WiFi first
   if (wifiConfig.isConfigured()) {
+    String storedSSID = wifiConfig.getSSID();
     if (LOG_LEVEL >= 1) {
       Serial.println("EEPROM WiFi config found");
       Serial.print("SSID: ");
-      Serial.println(wifiConfig.getSSID());
+      Serial.println(storedSSID);
+      Serial.print("SSID length: ");
+      Serial.println(storedSSID.length());
     }
     
-    if (wifiConfig.connect()) {
+    // SSID가 비어있거나 유효하지 않으면 설정 포털 시작
+    if (storedSSID.length() == 0) {
       if (LOG_LEVEL >= 1) {
-        Serial.println("WiFi connected!");
+        Serial.println("⚠️ 저장된 SSID가 비어있습니다. 설정 포털을 시작합니다.");
       }
-    } else {
-      // EEPROM connection failed - start config portal directly
-      // (Removed server WiFi config path for simplicity and reliability)
-      if (LOG_LEVEL >= 1) {
-        Serial.println("EEPROM WiFi connection failed");
-        Serial.println("Starting config portal...");
-      }
+      wifiConfig.reset(); // 잘못된 설정 초기화
       delay(1000);
       wifiConfig.startConfigPortal();
+    } else {
+      if (wifiConfig.connect()) {
+        if (LOG_LEVEL >= 1) {
+          Serial.println("WiFi connected!");
+        }
+      } else {
+        // EEPROM connection failed - start config portal directly
+        if (LOG_LEVEL >= 1) {
+          Serial.println("EEPROM WiFi connection failed");
+          Serial.println("Starting config portal...");
+        }
+        delay(1000);
+        wifiConfig.startConfigPortal();
+      }
     }
   } else {
     // No EEPROM config - start config portal

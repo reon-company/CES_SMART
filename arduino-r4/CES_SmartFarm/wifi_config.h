@@ -77,13 +77,38 @@ public:
   
   // 설정 저장
   void save(String newSSID, String newPassword) {
+    // 기존 설정 초기화 (이전 값이 남지 않도록)
+    reset();
+    delay(100);
+    
+    // 새 설정 저장
     ssid = newSSID;
     password = newPassword;
+    
+    // EEPROM에 저장 (기존 데이터 덮어쓰기)
     writeStringToEEPROM(EEPROM_SSID_ADDR, ssid, 64);
     writeStringToEEPROM(EEPROM_PASSWORD_ADDR, password, 64);
     EEPROM.write(EEPROM_CONFIGURED_ADDR, 1);
-    // Arduino R4에서는 commit()이 필요 없음 (자동 저장됨)
+    
+    // Arduino R4 WiFi는 EEPROM이 자동 저장되지만, 명시적으로 확인
+    // EEPROM 업데이트를 위해 약간의 지연
+    delay(200);
+    
     configured = true;
+    
+    // 저장 확인: EEPROM에서 다시 읽어서 검증
+    String verifySSID = readStringFromEEPROM(EEPROM_SSID_ADDR, 64);
+    if (verifySSID != ssid) {
+      Serial.println("⚠️ EEPROM 저장 검증 실패! 다시 시도...");
+      // 다시 저장 시도
+      writeStringToEEPROM(EEPROM_SSID_ADDR, ssid, 64);
+      writeStringToEEPROM(EEPROM_PASSWORD_ADDR, password, 64);
+      EEPROM.write(EEPROM_CONFIGURED_ADDR, 1);
+      delay(200);
+    }
+    
+    Serial.print("✅ EEPROM 저장 완료: SSID=");
+    Serial.println(ssid);
   }
   
   // 설정 초기화
@@ -91,8 +116,16 @@ public:
     configured = false;
     ssid = "";
     password = "";
+    
+    // EEPROM 영역을 0으로 초기화 (이전 값 완전 삭제)
+    for (int i = 0; i < 64; i++) {
+      EEPROM.write(EEPROM_SSID_ADDR + i, 0);
+      EEPROM.write(EEPROM_PASSWORD_ADDR + i, 0);
+    }
     EEPROM.write(EEPROM_CONFIGURED_ADDR, 0);
+    
     // Arduino R4에서는 commit()이 필요 없음 (자동 저장됨)
+    delay(100); // EEPROM 쓰기 완료 대기
   }
   
   String getSSID() { return ssid; }
@@ -322,8 +355,6 @@ public:
             Serial.println(newSSID);
             Serial.println("========================================");
             Serial.println();
-            Serial.println("아두이노를 재시작하면 저장된 WiFi에 연결됩니다.");
-            Serial.println("3초 후 재시작합니다...");
             
             // 성공 페이지
             client.println("HTTP/1.1 200 OK");
@@ -336,13 +367,31 @@ public:
             client.println("<style>body { font-family: Arial; text-align: center; margin-top: 100px; }");
             client.println("h1 { color: #4CAF50; }</style></head>");
             client.println("<body><h1>✅ 설정이 저장되었습니다!</h1>");
-            client.println("<p>아두이노를 재시작하면 WiFi에 연결됩니다.</p>");
+            client.println("<p>아두이노가 저장된 WiFi에 연결을 시도합니다.</p>");
+            client.println("<p>잠시 후 페이지를 새로고침하세요.</p>");
             client.println("</body></html>");
             
-            delay(3000);
-            // 아두이노 재시작 (ESP32 스타일이지만 R4에서는 작동하지 않을 수 있음)
-            // 대신 loop()로 돌아가서 연결 시도
+            // 클라이언트 응답 완료 대기
+            delay(500);
+            client.stop();
+            
             Serial.println("설정 포털 종료. WiFi 연결 시도...");
+            Serial.println("AP 모드 종료 중...");
+            
+            // AP 모드 종료
+            WiFi.disconnect();
+            delay(1000);
+            
+            // 저장된 WiFi로 연결 시도
+            Serial.println("저장된 WiFi로 연결 시도 중...");
+            if (connect()) {
+              Serial.println("✅ WiFi 연결 성공! 설정 포털을 종료합니다.");
+            } else {
+              Serial.println("❌ WiFi 연결 실패. 설정 포털을 다시 시작합니다.");
+              delay(2000);
+              startConfigPortal(); // 연결 실패 시 다시 설정 포털 시작
+            }
+            
             return; // 설정 완료, 루프 종료
           }
         }

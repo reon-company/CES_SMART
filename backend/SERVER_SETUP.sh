@@ -98,3 +98,4 @@ echo "  MySQL: $(mysql --version 2>/dev/null || echo 'N/A')"
 echo "  PM2: $(pm2 --version 2>/dev/null || echo 'N/A')"
 echo "  Nginx: $(nginx -v 2>&1 || echo 'N/A')"
 
+

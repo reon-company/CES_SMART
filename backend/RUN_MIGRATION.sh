@@ -76,3 +76,4 @@ echo ""
 echo "Migration completed successfully!"
 echo "Please restart the server: pm2 restart ces-smartfarm"
 
+

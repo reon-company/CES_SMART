@@ -177,3 +177,4 @@ mysql -h [RDS_ENDPOINT] -u [DB_USER] -p[DB_PASSWORD] -e "SHOW DATABASES;"
 - 마이그레이션 파일: `backend/database/migration_add_relay.sql`
 - 자동 스크립트: `backend/RUN_MIGRATION.sh`
 
+

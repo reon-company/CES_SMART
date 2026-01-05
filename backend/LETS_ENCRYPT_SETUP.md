@@ -146,3 +146,4 @@ return 'https://api.yourdomain.com';
 - 인증서 발급 후 Nginx가 자동으로 HTTPS 설정을 업데이트합니다
 - 방화벽에서 포트 443이 열려있어야 합니다
 
+

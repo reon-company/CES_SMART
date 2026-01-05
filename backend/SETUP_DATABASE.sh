@@ -48,3 +48,4 @@ echo "다음 단계:"
 echo "1. schema.sql 파일을 실행하여 테이블 생성"
 echo "2. .env 파일에 위 정보 입력"
 
+

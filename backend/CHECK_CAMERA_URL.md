@@ -15,9 +15,9 @@
 ### 서버에 SSH 접속
 
 ```bash
-ssh ubuntu@43.203.141.2
+ssh ubuntu@43.201.148.223
 # 또는
-ssh -i [key-file].pem ubuntu@43.203.141.2
+ssh -i [key-file].pem ubuntu@43.201.148.223
 ```
 
 ### 데이터베이스에 연결

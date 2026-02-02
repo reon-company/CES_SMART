@@ -1,11 +1,11 @@
 // API 기본 설정
-// 로컬에서 열어도 배포된 백엔드(43.203.141.2) 사용
+// 로컬에서 열어도 배포된 백엔드(43.201.148.223) 사용
 // 로컬 백엔드 사용 시: 아래를 'http://localhost:3000'으로 변경
 const getApiBaseUrl = () => {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     if (isLocal) {
-        return 'http://43.203.141.2:3000';
+        return 'http://43.201.148.223:3000';
     }
 
     // 프로덕션: HTTPS 또는 배포 서버

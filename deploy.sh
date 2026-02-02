@@ -3,7 +3,7 @@
 # CES SmartFarm Lightsail 배포 스크립트
 # 사용법: ./deploy.sh
 
-LIGHTSAIL_IP="43.203.141.2"
+LIGHTSAIL_IP="43.201.148.223"
 SSH_KEY="./LightsailDefaultKey-ap-northeast-2.pem"
 SSH_USER="ubuntu"  # 또는 "ec2-user" (Amazon Linux의 경우)
 REMOTE_DIR="/home/ubuntu/ces-smartfarm"

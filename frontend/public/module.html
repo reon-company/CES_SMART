@@ -308,6 +308,7 @@
                 
                 // module_id 저장 (센서 데이터 및 액추에이터 조회에 사용)
                 moduleModuleId = module.module_id;
+                window.moduleModuleId = module.module_id; // 전역 변수로 저장 (카메라 프록시 URL 변환용)
                 
                 if (!moduleModuleId) {
                     throw new Error('Module ID not found in module data');
@@ -378,13 +379,46 @@
             }
         }
 
+        // 카메라 스트림 URL을 프록시 URL로 변환 (로컬 IP인 경우)
+        function getProxyStreamUrl(streamUrl, moduleId) {
+            if (!streamUrl || !moduleId) {
+                return streamUrl;
+            }
+
+            try {
+                const url = new URL(streamUrl);
+                const hostname = url.hostname;
+                
+                // 로컬 IP 주소 체크 (192.168.x.x, 10.x.x.x, 172.16-31.x.x, 127.x.x.x)
+                const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.)/.test(hostname);
+                
+                if (isLocalIP) {
+                    // 서버 프록시 URL로 변환 (토큰을 쿼리 파라미터로 추가 - img 태그용)
+                    const token = localStorage.getItem('token');
+                    const proxyUrl = `${API_BASE_URL}/api/camera/${moduleId}/stream${token ? '?token=' + encodeURIComponent(token) : ''}`;
+                    console.log('Converting local IP to proxy URL:', streamUrl, '->', proxyUrl);
+                    return proxyUrl;
+                }
+                
+                // 이미 외부 URL이거나 서버 URL인 경우 그대로 사용
+                return streamUrl;
+            } catch (e) {
+                console.error('Invalid stream URL:', streamUrl, e);
+                return streamUrl;
+            }
+        }
+
         function loadCameraStream(streamUrl) {
             if (!streamUrl) {
                 console.log('loadCameraStream: No stream URL provided');
                 return;
             }
             
-            console.log('loadCameraStream: Loading stream from', streamUrl);
+            // module_id를 사용하여 프록시 URL로 변환
+            const moduleModuleId = window.moduleModuleId || moduleModuleId;
+            const finalStreamUrl = getProxyStreamUrl(streamUrl, moduleModuleId);
+            
+            console.log('loadCameraStream: Loading stream from', finalStreamUrl, '(original:', streamUrl, ')');
             
             const img = document.getElementById('cameraStream');
             const loading = document.getElementById('cameraLoading');
@@ -405,9 +439,12 @@
             status.textContent = '연결 중...';
             status.className = 'text-sm text-gray-500';
             
-            // MJPEG 스트림은 타임스탬프 없이 직접 로드 (스트림이므로 캐시 방지 불필요)
-            // 하지만 첫 로드 시에는 타임스탬프를 추가하여 강제 새로고침
-            const urlWithTimestamp = streamUrl + (streamUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+            // 프록시 URL인 경우 타임스탬프 추가 (인증 토큰은 자동으로 추가됨)
+            // 로컬 URL인 경우에만 타임스탬프 추가
+            const isProxyUrl = finalStreamUrl.includes('/api/camera/');
+            const urlWithTimestamp = isProxyUrl 
+                ? finalStreamUrl 
+                : finalStreamUrl + (finalStreamUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
             console.log('loadCameraStream: Final URL', urlWithTimestamp);
             
             // 이미지 요소 교체 (이벤트 리스너 충돌 방지)

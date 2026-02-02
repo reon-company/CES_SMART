@@ -8,13 +8,13 @@
 // #define WIFI_PASSWORD "2006076422"        // 사용 안 함 (EEPROM에 저장됨)
 
 // API Configuration
-#define API_BASE_URL "http://43.203.141.2:3000"
+#define API_BASE_URL "http://43.201.148.223:3000"
 #define API_SENSORS_ENDPOINT "/api/sensors"
 #define API_ACTUATORS_STATUS_ENDPOINT "/api/actuators/status"
 #define API_ACTUATORS_CONTROL_ENDPOINT "/api/actuators/control"
 
 // Module Configuration
-#define MODULE_ID "MODULE_001"  // 각 모듈마다 고유 ID 설정 필요
+#define MODULE_ID "MODULE_004"  // 각 모듈마다 고유 ID 설정 필요
 
 // Sensor Pin Configuration
 #define WATER_LEVEL_PIN A0      // 워터 레벨 센서 (아날로그)

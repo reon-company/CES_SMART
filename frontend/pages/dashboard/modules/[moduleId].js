@@ -18,6 +18,39 @@ export default function ModuleDetailPage() {
   const [updateError, setUpdateError] = useState('');
   const cameraImgRef = useRef(null);
 
+  // 카메라 스트림 URL을 프록시 URL로 변환 (로컬 IP인 경우)
+  const getProxyStreamUrl = (streamUrl, moduleId) => {
+    if (!streamUrl || !moduleId) {
+      return streamUrl;
+    }
+
+    try {
+      const url = new URL(streamUrl);
+      const hostname = url.hostname;
+      
+      // 로컬 IP 주소 체크 (192.168.x.x, 10.x.x.x, 172.16-31.x.x, 127.x.x.x)
+      const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.)/.test(hostname);
+      
+      if (isLocalIP) {
+        // 서버 프록시 URL로 변환 (토큰을 쿼리 파라미터로 추가 - img 태그용)
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://CES-smart.reonaicoffee.com';
+        let token = null;
+        if (typeof window !== 'undefined') {
+          token = localStorage.getItem('token');
+        }
+        const proxyUrl = `${apiBaseUrl}/api/camera/${moduleId}/stream${token ? '?token=' + encodeURIComponent(token) : ''}`;
+        console.log('Converting local IP to proxy URL:', streamUrl, '->', proxyUrl);
+        return proxyUrl;
+      }
+      
+      // 이미 외부 URL이거나 서버 URL인 경우 그대로 사용
+      return streamUrl;
+    } catch (e) {
+      console.error('Invalid stream URL:', streamUrl, e);
+      return streamUrl;
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
@@ -159,7 +192,11 @@ export default function ModuleDetailPage() {
                 onClick={() => {
                   setCameraError(false);
                   if (cameraImgRef.current && module.camera_stream_url) {
-                    cameraImgRef.current.src = module.camera_stream_url + (module.camera_stream_url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                    const proxyUrl = getProxyStreamUrl(module.camera_stream_url, module.module_id);
+                    const isProxyUrl = proxyUrl.includes('/api/camera/');
+                    cameraImgRef.current.src = isProxyUrl 
+                      ? proxyUrl 
+                      : proxyUrl + (proxyUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
                   }
                 }}
                 className="text-sm text-blue-500 hover:text-blue-700 font-medium flex items-center space-x-1"
@@ -194,7 +231,11 @@ export default function ModuleDetailPage() {
                   onClick={() => {
                     setCameraError(false);
                     if (cameraImgRef.current && module.camera_stream_url) {
-                      cameraImgRef.current.src = module.camera_stream_url + (module.camera_stream_url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                      const proxyUrl = getProxyStreamUrl(module.camera_stream_url, module.module_id);
+                      const isProxyUrl = proxyUrl.includes('/api/camera/');
+                      cameraImgRef.current.src = isProxyUrl 
+                        ? proxyUrl 
+                        : proxyUrl + (proxyUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
                     }
                   }}
                   className="text-blue-500 hover:text-blue-700 font-medium"
@@ -205,7 +246,7 @@ export default function ModuleDetailPage() {
             ) : (
               <img
                 ref={cameraImgRef}
-                src={module.camera_stream_url}
+                src={getProxyStreamUrl(module.camera_stream_url, module.module_id)}
                 alt="실시간 카메라 영상"
                 className="w-full h-full object-contain"
                 onError={() => setCameraError(true)}

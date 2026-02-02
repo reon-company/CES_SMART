@@ -107,7 +107,8 @@ app.get('/api', (req, res) => {
         control: 'GET /api/actuators/:moduleId, POST /api/actuators/control/:moduleId (인증 필요)',
         statusUpdate: 'POST /api/actuators/status/update/:moduleId (인증 없음)'
       },
-      config: 'GET/POST /api/config/thresholds/:moduleId (인증 필요)'
+      config: 'GET/POST /api/config/thresholds/:moduleId (인증 필요)',
+      camera: 'GET /api/camera/:moduleId/stream (인증 필요)'
     }
   });
 });
@@ -118,6 +119,7 @@ app.use('/api/modules', require('./routes/modules'));
 app.use('/api/sensors', require('./routes/sensors'));
 app.use('/api/actuators', require('./routes/actuators'));
 app.use('/api/config', require('./routes/config'));
+app.use('/api/camera', require('./routes/camera'));
 
 // 404 handler (must be after all routes)
 app.use((req, res) => {

@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모듈 데이터 - CES 스마트팜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+        * {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <a href="dashboard.html" class="text-white hover:text-gray-200">
+                        <span class="text-2xl">←</span>
+                    </a>
+                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                        <span class="text-2xl">📊</span>
+                    </div>
+                    <h1 class="text-2xl font-bold">모듈 데이터</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userEmail" class="text-sm">로딩 중...</span>
+                    <button onclick="auth.logout()"
+                        class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">
+                        로그아웃
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <!-- 모듈 정보 -->
+        <div id="moduleInfo" class="mb-6">
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <h2 id="moduleName" class="text-2xl font-bold text-gray-800 mb-2">로딩 중...</h2>
+                <p id="moduleId" class="text-gray-600">Module ID: 로딩 중...</p>
+            </div>
+        </div>
+
+        <!-- 필터 섹션 -->
+        <div class="mb-6 bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">데이터 필터</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">시작 날짜</label>
+                    <input type="date" id="startDate"
+                        class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">종료 날짜</label>
+                    <input type="date" id="endDate"
+                        class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">데이터 개수</label>
+                    <select id="dataLimit"
+                        class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        <option value="50">50개</option>
+                        <option value="100" selected>100개</option>
+                        <option value="200">200개</option>
+                        <option value="500">500개</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadData()"
+                        class="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-semibold">
+                        조회
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 통계 정보 -->
+        <div id="statistics" class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">온도 통계</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">평균</span>
+                        <span id="tempAvg" class="font-bold text-blue-600">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">최대</span>
+                        <span id="tempMax" class="font-bold text-red-600">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">최소</span>
+                        <span id="tempMin" class="font-bold text-green-600">--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">습도 통계</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">평균</span>
+                        <span id="humidityAvg" class="font-bold text-blue-600">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">최대</span>
+                        <span id="humidityMax" class="font-bold text-red-600">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">최소</span>
+                        <span id="humidityMin" class="font-bold text-green-600">--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">릴레이 상태</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">현재 상태</span>
+                        <span id="relayStatus" class="px-3 py-1 rounded-lg font-bold text-sm">
+                            <span class="inline-block w-3 h-3 rounded-full mr-2 bg-gray-400"></span>
+                            로딩 중...
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">켜진 시간</span>
+                        <span id="relayOnTime" class="font-bold text-orange-600">--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">켜진 비율</span>
+                        <span id="relayOnRatio" class="font-bold text-purple-600">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 그래프 섹션 -->
+        <div class="mb-6 bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">센서 데이터 그래프</h3>
+            <div class="relative" style="height: 400px;">
+                <canvas id="sensorChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 데이터 테이블 -->
+        <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">데이터 목록</h3>
+                <span id="dataCount" class="text-sm text-gray-600">총 0개</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-100 text-gray-700">
+                        <tr>
+                            <th class="px-4 py-3">시간</th>
+                            <th class="px-4 py-3">온도 (°C)</th>
+                            <th class="px-4 py-3">습도 (%)</th>
+                            <th class="px-4 py-3">릴레이</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="text-gray-600">
+                        <tr>
+                            <td colspan="4" class="px-4 py-8 text-center text-gray-400">데이터를 불러오는 중...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="pagination" class="mt-4 flex justify-center space-x-2"></div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        if (!auth.isAuthenticated()) {
+            window.location.href = 'login.html';
+        }
+
+        // Get module ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const moduleId = urlParams.get('id'); // Database ID
+
+        if (!moduleId) {
+            alert('모듈 ID가 없습니다.');
+            window.location.href = 'dashboard.html';
+        }
+
+        let moduleData = null;
+        let moduleModuleId = null; // module_id (e.g., MODULE_001)
+        let sensorChart = null;
+        let currentOffset = 0;
+        const pageSize = 20;
+        let relayStatus = null; // 현재 릴레이 상태
+
+        // Initialize date filters (default: last 7 days)
+        const today = new Date();
+        const lastWeek = new Date(today);
+        lastWeek.setDate(today.getDate() - 7);
+
+        document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        document.getElementById('startDate').value = lastWeek.toISOString().split('T')[0];
+
+        async function loadUserInfo() {
+            try {
+                const user = await authAPI.getMe();
+                document.getElementById('userEmail').textContent = user.email || '사용자';
+            } catch (err) {
+                console.error('사용자 정보 로드 실패:', err);
+            }
+        }
+
+        async function loadModule() {
+            try {
+                console.log('Loading module with database ID:', moduleId);
+                const response = await modulesAPI.getById(moduleId);
+                moduleData = response.module || response;
+                moduleModuleId = moduleData.module_id;
+
+                if (!moduleModuleId) {
+                    throw new Error('Module ID not found in module data');
+                }
+
+                document.getElementById('moduleName').textContent = moduleData.name || '모듈';
+                document.getElementById('moduleId').textContent = `Module ID: ${moduleModuleId}`;
+
+                // Load relay status and data after module is loaded
+                loadRelayStatus();
+                loadData();
+            } catch (err) {
+                console.error('모듈 정보 로드 실패:', err);
+                alert('모듈 정보를 불러오는데 실패했습니다.');
+                window.location.href = 'dashboard.html';
+            }
+        }
+
+        async function loadRelayStatus() {
+            if (!moduleModuleId) {
+                console.log('Waiting for module_id...');
+                setTimeout(loadRelayStatus, 500);
+                return;
+            }
+
+            try {
+                const token = auth.getToken();
+                if (!token) {
+                    console.error('No authentication token');
+                    return;
+                }
+
+                const response = await actuatorsAPI.getStatus(moduleModuleId);
+                const status = response.status || response;
+
+                relayStatus = Boolean(status.relay);
+
+                // Update relay status display
+                const statusElement = document.getElementById('relayStatus');
+                if (statusElement) {
+                    const statusText = relayStatus ? 'ON' : 'OFF';
+                    const statusColor = relayStatus ? 'bg-green-500' : 'bg-gray-400';
+                    const textColor = relayStatus ? 'text-green-700' : 'text-gray-700';
+                    statusElement.innerHTML = `
+                        <span class="inline-block w-3 h-3 rounded-full mr-2 ${statusColor}"></span>
+                        <span class="${textColor}">${statusText}</span>
+                    `;
+                }
+            } catch (err) {
+                console.error('릴레이 상태 로드 실패:', err);
+                const statusElement = document.getElementById('relayStatus');
+                if (statusElement) {
+                    statusElement.innerHTML = `
+                        <span class="inline-block w-3 h-3 rounded-full mr-2 bg-gray-400"></span>
+                        <span class="text-gray-700">오류</span>
+                    `;
+                }
+            }
+        }
+
+        async function loadData() {
+            if (!moduleModuleId) {
+                console.log('Waiting for module_id...');
+                setTimeout(loadData, 500);
+                return;
+            }
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const limit = parseInt(document.getElementById('dataLimit').value);
+
+            // Show loading state
+            document.getElementById('dataTableBody').innerHTML =
+                '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">데이터를 불러오는 중...</td></tr>';
+
+            try {
+                const token = auth.getToken();
+                if (!token) {
+                    console.error('No authentication token');
+                    document.getElementById('dataTableBody').innerHTML =
+                        '<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">인증 토큰이 없습니다. 다시 로그인해주세요.</td></tr>';
+                    return;
+                }
+
+                // Build query string
+                let queryString = `?limit=${limit}&offset=${currentOffset}`;
+                if (startDate) {
+                    // Add time to start date (00:00:00)
+                    queryString += `&start_date=${startDate}T00:00:00`;
+                }
+                if (endDate) {
+                    // Add time to end date (23:59:59)
+                    queryString += `&end_date=${endDate}T23:59:59`;
+                }
+
+                console.log('Loading sensor history:', moduleModuleId, queryString);
+
+                const response = await fetch(`${API_BASE_URL}/api/sensors/history/${moduleModuleId}${queryString}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Error response:', errorData);
+
+                    if (response.status === 404 && errorData.message === 'No sensor data found') {
+                        // No data is not an error, just show empty state
+                        document.getElementById('dataCount').textContent = '총 0개';
+                        document.getElementById('dataTableBody').innerHTML =
+                            '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">해당 기간에 데이터가 없습니다.</td></tr>';
+                        calculateStatistics([]);
+                        if (sensorChart) {
+                            sensorChart.destroy();
+                            sensorChart = null;
+                        }
+                        document.getElementById('pagination').innerHTML = '';
+                        return;
+                    }
+
+                    throw new Error(errorData.message || `서버 오류 (${response.status})`);
+                }
+
+                const result = await response.json();
+                console.log('Sensor history result:', result);
+
+                const data = result.data || [];
+                const total = result.total || result.count || data.length;
+
+                // Update data count
+                document.getElementById('dataCount').textContent = `총 ${total}개 (표시: ${data.length}개)`;
+
+                // Calculate statistics
+                calculateStatistics(data);
+
+                // Calculate relay statistics
+                calculateRelayStatistics(data);
+
+                // Update chart
+                if (data.length > 0) {
+                    updateChart(data);
+                } else {
+                    // Destroy chart if no data
+                    if (sensorChart) {
+                        sensorChart.destroy();
+                        sensorChart = null;
+                    }
+                }
+
+                // Update table
+                updateTable(data);
+
+                // Update pagination
+                updatePagination(total);
+
+            } catch (err) {
+                console.error('센서 데이터 로드 실패:', err);
+                document.getElementById('dataTableBody').innerHTML =
+                    `<tr><td colspan="4" class="px-4 py-8 text-center text-red-500">오류: ${err.message || '데이터를 불러오는데 실패했습니다.'}</td></tr>`;
+
+                // Clear statistics on error
+                document.getElementById('tempAvg').textContent = '--';
+                document.getElementById('tempMax').textContent = '--';
+                document.getElementById('tempMin').textContent = '--';
+                document.getElementById('humidityAvg').textContent = '--';
+                document.getElementById('humidityMax').textContent = '--';
+                document.getElementById('humidityMin').textContent = '--';
+
+                // Destroy chart on error
+                if (sensorChart) {
+                    sensorChart.destroy();
+                    sensorChart = null;
+                }
+
+                document.getElementById('pagination').innerHTML = '';
+            }
+        }
+
+        function calculateStatistics(data) {
+            if (data.length === 0) {
+                document.getElementById('tempAvg').textContent = '--';
+                document.getElementById('tempMax').textContent = '--';
+                document.getElementById('tempMin').textContent = '--';
+                document.getElementById('humidityAvg').textContent = '--';
+                document.getElementById('humidityMax').textContent = '--';
+                document.getElementById('humidityMin').textContent = '--';
+                return;
+            }
+
+            const temperatures = data.map(d => parseFloat(d.temperature)).filter(v => !isNaN(v));
+            const humidities = data.map(d => parseFloat(d.humidity)).filter(v => !isNaN(v));
+
+            if (temperatures.length > 0) {
+                const tempSum = temperatures.reduce((a, b) => a + b, 0);
+                const tempAvg = (tempSum / temperatures.length).toFixed(1);
+                const tempMax = Math.max(...temperatures).toFixed(1);
+                const tempMin = Math.min(...temperatures).toFixed(1);
+
+                document.getElementById('tempAvg').textContent = `${tempAvg}°C`;
+                document.getElementById('tempMax').textContent = `${tempMax}°C`;
+                document.getElementById('tempMin').textContent = `${tempMin}°C`;
+            }
+
+            if (humidities.length > 0) {
+                const humiditySum = humidities.reduce((a, b) => a + b, 0);
+                const humidityAvg = (humiditySum / humidities.length).toFixed(1);
+                const humidityMax = Math.max(...humidities).toFixed(1);
+                const humidityMin = Math.min(...humidities).toFixed(1);
+
+                document.getElementById('humidityAvg').textContent = `${humidityAvg}%`;
+                document.getElementById('humidityMax').textContent = `${humidityMax}%`;
+                document.getElementById('humidityMin').textContent = `${humidityMin}%`;
+            }
+        }
+
+        function calculateRelayStatistics(data) {
+            if (!data || data.length === 0) {
+                document.getElementById('relayOnTime').textContent = '--';
+                document.getElementById('relayOnRatio').textContent = '--';
+                return;
+            }
+
+            // 릴레이 상태가 있는 데이터만 필터링
+            const relayData = data.filter(d => d.relay !== null && d.relay !== undefined);
+
+            if (relayData.length === 0) {
+                document.getElementById('relayOnTime').textContent = '--';
+                document.getElementById('relayOnRatio').textContent = '--';
+                return;
+            }
+
+            // 릴레이가 켜진 횟수
+            const relayOnCount = relayData.filter(d => Boolean(d.relay)).length;
+            const relayOnRatio = ((relayOnCount / relayData.length) * 100).toFixed(1);
+
+            // 시간 계산 (데이터 간격이 30초라고 가정)
+            const timeInterval = 30; // 초
+            const relayOnTimeSeconds = relayOnCount * timeInterval;
+            const hours = Math.floor(relayOnTimeSeconds / 3600);
+            const minutes = Math.floor((relayOnTimeSeconds % 3600) / 60);
+
+            let timeStr = '';
+            if (hours > 0) {
+                timeStr = `${hours}시간 ${minutes}분`;
+            } else if (minutes > 0) {
+                timeStr = `${minutes}분`;
+            } else {
+                timeStr = `${relayOnTimeSeconds}초`;
+            }
+
+            document.getElementById('relayOnTime').textContent = timeStr;
+            document.getElementById('relayOnRatio').textContent = `${relayOnRatio}%`;
+        }
+
+        function updateChart(data) {
+            if (!data || data.length === 0) {
+                if (sensorChart) {
+                    sensorChart.destroy();
+                    sensorChart = null;
+                }
+                return;
+            }
+
+            const ctx = document.getElementById('sensorChart');
+            if (!ctx) {
+                console.error('Chart canvas not found');
+                return;
+            }
+
+            // Sort data by created_at (oldest first for chart)
+            const sortedData = [...data].sort((a, b) => {
+                return new Date(a.created_at) - new Date(b.created_at);
+            });
+
+            // Prepare data for chart
+            const labels = sortedData.map(d => {
+                const date = new Date(d.created_at);
+                return date.toLocaleString('ko-KR', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            });
+
+            const tempData = sortedData.map(d => {
+                const val = parseFloat(d.temperature);
+                return isNaN(val) ? null : val;
+            });
+
+            const humidityData = sortedData.map(d => {
+                const val = parseFloat(d.humidity);
+                return isNaN(val) ? null : val;
+            });
+
+            // 릴레이 데이터 (센서 데이터에 포함된 실제 릴레이 상태)
+            const relayData = sortedData.map(d => {
+                if (d.relay !== null && d.relay !== undefined) {
+                    return Boolean(d.relay) ? 1 : 0;
+                }
+                return null;
+            });
+
+            // Destroy existing chart if it exists
+            if (sensorChart) {
+                sensorChart.destroy();
+            }
+
+            sensorChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '온도 (°C)',
+                            data: tempData,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            yAxisID: 'y',
+                            fill: false
+                        },
+                        {
+                            label: '습도 (%)',
+                            data: humidityData,
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0.4,
+                            yAxisID: 'y1',
+                            fill: false
+                        },
+                        {
+                            label: '릴레이 (ON/OFF)',
+                            data: relayData,
+                            borderColor: 'rgb(168, 85, 247)',
+                            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                            tension: 0,
+                            yAxisID: 'y2',
+                            fill: false,
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
+                            stepped: 'before'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '시간'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '온도 (°C)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '습도 (%)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        },
+                        y2: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '릴레이'
+                            },
+                            min: -0.1,
+                            max: 1.1,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function (value) {
+                                    return value === 1 ? 'ON' : value === 0 ? 'OFF' : '';
+                                }
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTable(data) {
+            const tbody = document.getElementById('dataTableBody');
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">데이터가 없습니다.</td></tr>';
+                return;
+            }
+
+            // Sort by created_at (latest first for table)
+            const sortedData = [...data].sort((a, b) => {
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            tbody.innerHTML = sortedData.map(d => {
+                const date = new Date(d.created_at);
+                const timeStr = date.toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                let temp = '--';
+                if (d.temperature !== null && d.temperature !== undefined) {
+                    const tempVal = parseFloat(d.temperature);
+                    if (!isNaN(tempVal)) {
+                        temp = tempVal.toFixed(1);
+                    }
+                }
+
+                let humidity = '--';
+                if (d.humidity !== null && d.humidity !== undefined) {
+                    const humidityVal = parseFloat(d.humidity);
+                    if (!isNaN(humidityVal)) {
+                        humidity = humidityVal.toFixed(1);
+                    }
+                }
+
+                // 릴레이 상태 (센서 데이터에 포함된 실제 릴레이 상태)
+                let relayDisplay = '--';
+                if (d.relay !== null && d.relay !== undefined) {
+                    relayDisplay = Boolean(d.relay) ? 'ON' : 'OFF';
+                }
+
+                return `
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="px-4 py-3">${timeStr}</td>
+                        <td class="px-4 py-3">${temp}${temp !== '--' ? '°C' : ''}</td>
+                        <td class="px-4 py-3">${humidity}${humidity !== '--' ? '%' : ''}</td>
+                        <td class="px-4 py-3">
+                            ${relayDisplay !== '--' ? `
+                                <span class="px-2 py-1 rounded text-xs font-semibold ${relayDisplay === 'ON' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}">
+                                    ${relayDisplay}
+                                </span>
+                            ` : '--'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updatePagination(total) {
+            const pagination = document.getElementById('pagination');
+            const totalPages = Math.ceil(total / pageSize);
+            const currentPage = Math.floor(currentOffset / pageSize) + 1;
+
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            // Previous button
+            if (currentPage > 1) {
+                html += `<button onclick="goToPage(${currentPage - 1})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">이전</button>`;
+            }
+
+            // Page numbers
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                html += `<button onclick="goToPage(${i})" class="px-4 py-2 ${i === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'} rounded-lg hover:bg-gray-300 transition">${i}</button>`;
+            }
+
+            // Next button
+            if (currentPage < totalPages) {
+                html += `<button onclick="goToPage(${currentPage + 1})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">다음</button>`;
+            }
+
+            pagination.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentOffset = (page - 1) * pageSize;
+            loadData();
+        }
+
+        // Reset pagination when filters change
+        document.getElementById('startDate').addEventListener('change', () => {
+            currentOffset = 0;
+        });
+        document.getElementById('endDate').addEventListener('change', () => {
+            currentOffset = 0;
+        });
+        document.getElementById('dataLimit').addEventListener('change', () => {
+            currentOffset = 0;
+        });
+
+        // Initialize
+        loadUserInfo();
+        loadModule();
+
+        // 릴레이 상태를 주기적으로 업데이트 (30초마다)
+        setInterval(() => {
+            if (moduleModuleId) {
+                loadRelayStatus();
+            }
+        }, 30000);
+    </script>
+</body>
+
+</html>

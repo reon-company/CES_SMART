@@ -3,7 +3,7 @@
 ## 연동 완료 상태
 
 ### 백엔드 서버
-- **URL**: http://3.36.109.155:3000
+- **URL**: http://43.203.141.2:3000
 - **상태**: ✅ 정상 작동 중
 - **데이터베이스**: ✅ 연결 성공
 
@@ -16,13 +16,13 @@
 ### 1. API 기본 URL 설정
 `frontend/lib/api.js` 파일에서 기본 URL이 백엔드 서버로 설정됨:
 ```javascript
-baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://3.36.109.155:3000'
+baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://43.203.141.2:3000'
 ```
 
 ### 2. 환경 변수 (선택사항)
 프로덕션 배포 시 Vercel에서 환경 변수 설정:
 ```
-NEXT_PUBLIC_API_BASE_URL=http://3.36.109.155:3000
+NEXT_PUBLIC_API_BASE_URL=http://43.203.141.2:3000
 ```
 
 ## 개발 서버 실행
@@ -30,17 +30,17 @@ NEXT_PUBLIC_API_BASE_URL=http://3.36.109.155:3000
 ### 로컬 개발
 ```bash
 cd frontend
-NEXT_PUBLIC_API_BASE_URL=http://3.36.109.155:3000 npm run dev
+NEXT_PUBLIC_API_BASE_URL=http://43.203.141.2:3000 npm run dev
 ```
 
 또는 `.env.local` 파일 생성 (gitignore에 포함됨):
 ```
-NEXT_PUBLIC_API_BASE_URL=http://3.36.109.155:3000
+NEXT_PUBLIC_API_BASE_URL=http://43.203.141.2:3000
 ```
 
 ### 접속
 - 프론트엔드: http://localhost:3001
-- 백엔드 API: http://3.36.109.155:3000
+- 백엔드 API: http://43.203.141.2:3000
 
 ## 연동 테스트
 
@@ -58,20 +58,20 @@ http://localhost:3001/login 접속하여 로그인
 ### 브라우저 개발자 도구에서 확인
 1. F12로 개발자 도구 열기
 2. Network 탭 확인
-3. API 요청이 `http://3.36.109.155:3000`으로 전송되는지 확인
+3. API 요청이 `http://43.203.141.2:3000`으로 전송되는지 확인
 
 ### 테스트 명령어
 ```bash
 # Health Check
-curl http://3.36.109.155:3000/api/health
+curl http://43.203.141.2:3000/api/health
 
 # 회원가입
-curl -X POST http://3.36.109.155:3000/api/auth/register \
+curl -X POST http://43.203.141.2:3000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"test123456","name":"Test User"}'
 
 # 로그인
-curl -X POST http://3.36.109.155:3000/api/auth/login \
+curl -X POST http://43.203.141.2:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"test123456"}'
 ```
@@ -91,7 +91,7 @@ CORS_ORIGIN=http://localhost:3001
 ```
 
 ### API 연결 실패
-1. 백엔드 서버 상태 확인: `curl http://3.36.109.155:3000/api/health`
+1. 백엔드 서버 상태 확인: `curl http://43.203.141.2:3000/api/health`
 2. 방화벽 설정 확인 (포트 3000 열려있는지)
 3. 네트워크 연결 확인
 

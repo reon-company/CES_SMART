@@ -74,6 +74,35 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'CES SmartFarm API Server' });
 });
 
+// API 목록 (라우트 확인용)
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'CES SmartFarm API',
+    baseUrl: '/api',
+    routes: {
+      health: 'GET /api/health',
+      auth: {
+        register: 'POST /api/auth/register',
+        login: 'POST /api/auth/login',
+        me: 'GET /api/auth/me (인증 필요)',
+        logout: 'POST /api/auth/logout (인증 필요)'
+      },
+      modules: 'GET/POST /api/modules, GET/PUT/DELETE /api/modules/:moduleId (인증 필요)',
+      sensors: {
+        create: 'POST /api/sensors (인증 필요)',
+        latest: 'GET /api/sensors/latest/:moduleId (인증 필요)',
+        history: 'GET /api/sensors/history/:moduleId (인증 필요)'
+      },
+      actuators: {
+        status: 'GET /api/actuators/status/:moduleId (인증 없음)',
+        control: 'GET /api/actuators/:moduleId, POST /api/actuators/control/:moduleId (인증 필요)',
+        statusUpdate: 'POST /api/actuators/status/update/:moduleId (인증 없음)'
+      },
+      config: 'GET/POST /api/config/thresholds/:moduleId (인증 필요)'
+    }
+  });
+});
+
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/modules', require('./routes/modules'));
@@ -83,7 +112,12 @@ app.use('/api/config', require('./routes/config'));
 
 // 404 handler (must be after all routes)
 app.use((req, res) => {
-  res.status(404).json({ success: false, message: 'Route not found' });
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+    path: req.method + ' ' + req.originalUrl,
+    hint: 'GET /api 로 사용 가능한 라우트 목록 확인'
+  });
 });
 
 // Error handling middleware (must be last)

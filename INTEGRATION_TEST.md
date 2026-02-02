@@ -3,7 +3,7 @@
 ## 현재 상태
 
 ### ✅ 완료된 작업
-1. 백엔드 서버: http://3.36.109.155:3000 (정상 작동)
+1. 백엔드 서버: http://43.203.141.2:3000 (정상 작동)
 2. 프론트엔드 서버: http://localhost:3001 (실행 중)
 3. API 기본 URL 설정 완료
 4. 데이터베이스 연결 성공
@@ -41,17 +41,17 @@ http://localhost:3001
 1. 브라우저에서 F12로 개발자 도구 열기
 2. Network 탭 선택
 3. 회원가입/로그인 시도
-4. API 요청이 `http://3.36.109.155:3000`으로 전송되는지 확인
+4. API 요청이 `http://43.203.141.2:3000`으로 전송되는지 확인
 5. 응답 상태 코드 확인 (200 OK)
 
 ### 3. 콘솔에서 직접 테스트
 
 ```bash
 # Health Check
-curl http://3.36.109.155:3000/api/health
+curl http://43.203.141.2:3000/api/health
 
 # 회원가입
-curl -X POST http://3.36.109.155:3000/api/auth/register \
+curl -X POST http://43.203.141.2:3000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -60,7 +60,7 @@ curl -X POST http://3.36.109.155:3000/api/auth/register \
   }'
 
 # 로그인
-curl -X POST http://3.36.109.155:3000/api/auth/login \
+curl -X POST http://43.203.141.2:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -90,7 +90,7 @@ curl -X POST http://3.36.109.155:3000/api/auth/login \
 ### CORS 오류 발생 시
 백엔드 서버의 `.env` 파일 확인:
 ```bash
-ssh -i LightsailDefaultKey-ap-northeast-2.pem ubuntu@3.36.109.155
+ssh -i LightsailDefaultKey-ap-northeast-2.pem ubuntu@43.203.141.2
 cd ~/ces-smartfarm/backend
 cat .env | grep CORS
 ```

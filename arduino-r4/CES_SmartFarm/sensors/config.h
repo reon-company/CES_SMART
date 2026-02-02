@@ -8,7 +8,7 @@
 // #define WIFI_PASSWORD "2006076422"        // 사용 안 함 (EEPROM에 저장됨)
 
 // API Configuration
-#define API_BASE_URL "http://3.36.109.155:3000"
+#define API_BASE_URL "http://43.203.141.2:3000"
 #define API_SENSORS_ENDPOINT "/api/sensors"
 #define API_ACTUATORS_STATUS_ENDPOINT "/api/actuators/status"
 #define API_ACTUATORS_CONTROL_ENDPOINT "/api/actuators/control"

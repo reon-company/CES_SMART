@@ -16,7 +16,7 @@ public:
   APIClient() {
     baseUrl = String(API_BASE_URL);
     // Parse URL to extract host and port
-    // For http://3.36.109.155:3000
+    // For http://43.203.141.2:3000
     if (baseUrl.startsWith("http://")) {
       baseUrl = baseUrl.substring(7); // Remove "http://"
     }

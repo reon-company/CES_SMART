@@ -11,12 +11,13 @@ export const modulesAPI = {
     return response.data;
   },
 
-  create: async (name, moduleId, wifiSsid, wifiPassword) => {
+  create: async (name, moduleId, wifiSsid, wifiPassword, cameraStreamUrl = null) => {
     const response = await api.post('/api/modules', {
       name,
       module_id: moduleId,
       wifi_ssid: wifiSsid,
       wifi_password: wifiPassword,
+      camera_stream_url: cameraStreamUrl || undefined,
     });
     return response.data;
   },

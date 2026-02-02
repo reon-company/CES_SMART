@@ -33,10 +33,10 @@ class Module {
     return rows[0].count;
   }
 
-  static async create(userId, name, moduleId, wifiSsid = null, wifiPassword = null) {
+  static async create(userId, name, moduleId, wifiSsid = null, wifiPassword = null, cameraStreamUrl = null) {
     const [result] = await pool.execute(
-      'INSERT INTO modules (user_id, name, module_id, wifi_ssid, wifi_password) VALUES (?, ?, ?, ?, ?)',
-      [userId, name, moduleId, wifiSsid, wifiPassword]
+      'INSERT INTO modules (user_id, name, module_id, wifi_ssid, wifi_password, camera_stream_url) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, name, moduleId, wifiSsid, wifiPassword, cameraStreamUrl]
     );
     return result.insertId;
   }
@@ -44,6 +44,12 @@ class Module {
   static async update(id, userId, data) {
     const fields = [];
     const values = [];
+    
+    console.log('Module.update called with data:', {
+      id,
+      userId,
+      data: { ...data, wifi_password: data.wifi_password ? '***' : data.wifi_password }
+    });
     
     if (data.name) {
       fields.push('name = ?');
@@ -61,14 +67,28 @@ class Module {
       fields.push('wifi_password = ?');
       values.push(data.wifi_password);
     }
+    // camera_stream_url은 null도 허용하므로 undefined가 아닌 경우 모두 업데이트
+    if (data.camera_stream_url !== undefined) {
+      fields.push('camera_stream_url = ?');
+      values.push(data.camera_stream_url); // null도 허용
+      console.log('Adding camera_stream_url to update:', data.camera_stream_url);
+    } else {
+      console.log('camera_stream_url is undefined, skipping update');
+    }
     
-    if (fields.length === 0) return null;
+    if (fields.length === 0) {
+      console.log('No fields to update');
+      return null;
+    }
     
     values.push(id, userId);
-    const [result] = await pool.execute(
-      `UPDATE modules SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`,
-      values
-    );
+    const sql = `UPDATE modules SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`;
+    console.log('Executing SQL:', sql);
+    console.log('With values:', values.map((v, i) => i < values.length - 2 ? (v === null ? 'NULL' : (typeof v === 'string' && v.length > 20 ? v.substring(0, 20) + '...' : v)) : v));
+    
+    const [result] = await pool.execute(sql, values);
+    console.log('Update result:', { affectedRows: result.affectedRows });
+    
     return result.affectedRows > 0;
   }
 

@@ -30,9 +30,9 @@ export default function ModuleList() {
     }
   };
 
-  const handleAddModule = async (name, moduleId, wifiSsid, wifiPassword) => {
+  const handleAddModule = async (name, moduleId, wifiSsid, wifiPassword, cameraStreamUrl = null) => {
     try {
-      const response = await modulesAPI.create(name, moduleId, wifiSsid, wifiPassword);
+      const response = await modulesAPI.create(name, moduleId, wifiSsid, wifiPassword, cameraStreamUrl);
       if (response.success) {
         setShowAddModal(false);
         fetchModules();

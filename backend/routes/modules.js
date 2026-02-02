@@ -59,7 +59,7 @@ router.get('/:moduleId', auth, async (req, res) => {
 // @access  Private
 router.post('/', auth, moduleValidation, validate, async (req, res) => {
   try {
-    const { name, module_id, wifi_ssid, wifi_password } = req.body;
+    const { name, module_id, wifi_ssid, wifi_password, camera_stream_url } = req.body;
 
     // Check module count limit (최대 30개)
     const moduleCount = await Module.countByUserId(req.user.id);
@@ -79,8 +79,15 @@ router.post('/', auth, moduleValidation, validate, async (req, res) => {
       });
     }
 
-    // Create module
-    const moduleId = await Module.create(req.user.id, name, module_id, wifi_ssid, wifi_password);
+    // Create module (카메라 전용 모듈은 wifi 비어 있을 수 있음)
+    const moduleId = await Module.create(
+      req.user.id,
+      name,
+      module_id,
+      wifi_ssid || null,
+      wifi_password || null,
+      camera_stream_url || null
+    );
 
     // Initialize actuator status (all actuators OFF)
     await ActuatorStatus.createOrUpdate(module_id, {
@@ -113,7 +120,13 @@ router.post('/', auth, moduleValidation, validate, async (req, res) => {
 // @access  Private
 router.put('/:moduleId', auth, async (req, res) => {
   try {
-    const { name, status, wifi_ssid, wifi_password } = req.body;
+    const { name, status, wifi_ssid, wifi_password, camera_stream_url } = req.body;
+
+    console.log('Update module request:', {
+      moduleId: req.params.moduleId,
+      userId: req.user.id,
+      camera_stream_url: camera_stream_url
+    });
 
     // Check if module exists and belongs to user
     const module = await Module.findById(req.params.moduleId, req.user.id);
@@ -125,12 +138,17 @@ router.put('/:moduleId', auth, async (req, res) => {
     }
 
     // Update module
-    const updated = await Module.update(req.params.moduleId, req.user.id, {
+    const updateData = {
       name,
       status,
       wifi_ssid,
-      wifi_password
-    });
+      wifi_password,
+      camera_stream_url // null도 허용
+    };
+    
+    console.log('Update data:', updateData);
+    
+    const updated = await Module.update(req.params.moduleId, req.user.id, updateData);
 
     if (!updated) {
       return res.status(400).json({
@@ -140,6 +158,12 @@ router.put('/:moduleId', auth, async (req, res) => {
     }
 
     const updatedModule = await Module.findById(req.params.moduleId, req.user.id);
+    
+    console.log('Updated module from database:', {
+      id: updatedModule.id,
+      name: updatedModule.name,
+      camera_stream_url: updatedModule.camera_stream_url
+    });
 
     res.json({
       success: true,

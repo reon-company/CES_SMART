@@ -6,6 +6,7 @@ export default function AddModuleModal({ onClose, onAdd }) {
     module_id: '',
     wifi_ssid: '',
     wifi_password: '',
+    camera_stream_url: '',
   });
   const [error, setError] = useState('');
 
@@ -19,11 +20,17 @@ export default function AddModuleModal({ onClose, onAdd }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.module_id.trim() || !formData.wifi_ssid.trim() || !formData.wifi_password.trim()) {
-      setError('모든 필드를 입력해주세요.');
+    if (!formData.name.trim() || !formData.module_id.trim()) {
+      setError('모듈 이름과 모듈 ID를 입력해주세요.');
       return;
     }
-    onAdd(formData.name, formData.module_id, formData.wifi_ssid, formData.wifi_password);
+    // 아두이노 R4 모듈은 WiFi 필수, 카메라 전용은 WiFi 선택
+    const needsWifi = !formData.camera_stream_url?.trim();
+    if (needsWifi && (!formData.wifi_ssid?.trim() || !formData.wifi_password?.trim())) {
+      setError('WiFi SSID와 비밀번호를 입력해주세요. (카메라 전용 모듈인 경우 카메라 스트림 URL만 입력하면 됩니다)');
+      return;
+    }
+    onAdd(formData.name, formData.module_id, formData.wifi_ssid || null, formData.wifi_password || null, formData.camera_stream_url?.trim() || null);
   };
 
   return (
@@ -55,7 +62,7 @@ export default function AddModuleModal({ onClose, onAdd }) {
 
           <div className="mb-4">
             <label htmlFor="module_id" className="block text-gray-700 text-sm font-bold mb-2">
-              모듈 ID (아두이노에서 설정한 MODULE_ID)
+              모듈 ID <span className="text-gray-400 font-normal">(고유한 ID, 아두이노 R4와 구분용)</span>
             </label>
             <input
               type="text"
@@ -64,14 +71,15 @@ export default function AddModuleModal({ onClose, onAdd }) {
               value={formData.module_id}
               onChange={handleChange}
               required
-              placeholder="예: MODULE_001"
+              placeholder="예: MODULE_001 또는 CAM_001"
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             />
+            <p className="text-xs text-gray-500 mt-1">아두이노 R4 모듈: MODULE_001, ESP32-CAM 모듈: CAM_001</p>
           </div>
 
           <div className="mb-4">
             <label htmlFor="wifi_ssid" className="block text-gray-700 text-sm font-bold mb-2">
-              WiFi 이름 (SSID)
+              WiFi 이름 (SSID) <span className="text-gray-400 font-normal">(아두이노 R4용, 선택)</span>
             </label>
             <input
               type="text"
@@ -79,15 +87,15 @@ export default function AddModuleModal({ onClose, onAdd }) {
               name="wifi_ssid"
               value={formData.wifi_ssid}
               onChange={handleChange}
-              required
               placeholder="예: SK_WiFiGIGA91A3_2.4G"
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             />
+            <p className="text-xs text-gray-500 mt-1">카메라 전용 모듈(ESP32-CAM)이면 비워두어도 됩니다 (ESP32-CAM은 .ino 또는 config에서 직접 WiFi 설정)</p>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label htmlFor="wifi_password" className="block text-gray-700 text-sm font-bold mb-2">
-              WiFi 비밀번호
+              WiFi 비밀번호 <span className="text-gray-400 font-normal">(아두이노 R4용, 선택)</span>
             </label>
             <input
               type="password"
@@ -95,11 +103,31 @@ export default function AddModuleModal({ onClose, onAdd }) {
               name="wifi_password"
               value={formData.wifi_password}
               onChange={handleChange}
-              required
               placeholder="WiFi 비밀번호를 입력하세요"
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             />
-            <p className="text-xs text-gray-500 mt-1">아두이노가 이 WiFi에 자동으로 연결됩니다</p>
+            <p className="text-xs text-gray-500 mt-1">아두이노 R4 모듈이 이 WiFi에 자동으로 연결됩니다. 카메라 전용 모듈이면 비워두세요.</p>
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="camera_stream_url" className="block text-gray-700 text-sm font-bold mb-2">
+              카메라 스트림 URL <span className="text-gray-400 font-normal">(ESP32-CAM용, 선택)</span>
+            </label>
+            <input
+              type="url"
+              id="camera_stream_url"
+              name="camera_stream_url"
+              value={formData.camera_stream_url}
+              onChange={handleChange}
+              placeholder="예: http://192.168.0.100:81/stream"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              ESP32-CAM 실시간 영상을 보려면 스트림 URL을 입력하세요. 형식: <code className="bg-gray-100 px-1 rounded">http://&lt;ESP32-CAM IP&gt;:81/stream</code>
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              등록 후 모듈 상세 페이지에 들어가면 실시간 카메라 섹션에 영상이 표시됩니다.
+            </p>
           </div>
 
           <div className="flex justify-end space-x-4">

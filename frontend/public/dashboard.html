@@ -59,26 +59,44 @@
     </main>
 
     <div id="addModuleModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <h3 class="text-2xl font-bold mb-4">모듈 추가</h3>
+            <div id="addModuleError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 hidden"></div>
             <form id="addModuleForm" class="space-y-4">
                 <div>
                     <label class="block text-gray-700 text-sm font-semibold mb-2">모듈 이름</label>
-                    <input type="text" id="moduleName" required placeholder="예: 1호 수조, 테스트 모듈"
+                    <input type="text" id="moduleName" required placeholder="예: 농장 카메라"
                         class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-gray-700 text-sm font-semibold mb-2">Module ID <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" id="moduleId" required placeholder="MODULE_001" pattern="[A-Za-z0-9_]+"
+                    <label class="block text-gray-700 text-sm font-semibold mb-2">모듈 ID <span class="text-gray-400 font-normal">(고유한 ID, 아두이노 R4와 구분용)</span></label>
+                    <input type="text" id="moduleId" required placeholder="예: MODULE_001 또는 CAM_001" pattern="[A-Za-z0-9_]+"
                         title="영문자, 숫자, 언더스코어만 사용 가능"
                         class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">아두이노 코드의 MODULE_ID와 정확히 일치해야 합니다</p>
+                    <p class="text-xs text-gray-500 mt-1">아두이노 R4 모듈: MODULE_001, ESP32-CAM 모듈: CAM_001</p>
                 </div>
                 <div>
-                    <label class="block text-gray-700 text-sm font-semibold mb-2">MAC 주소 (선택사항)</label>
-                    <input type="text" id="moduleMac" placeholder="AA:BB:CC:DD:EE:FF"
+                    <label class="block text-gray-700 text-sm font-semibold mb-2">WiFi 이름 (SSID) <span class="text-gray-400 font-normal">(아두이노 R4용, 선택)</span></label>
+                    <input type="text" id="moduleWifiSsid" placeholder="예: SK_WiFiGIGA91A3_2.4G"
                         class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">카메라 전용 모듈(ESP32-CAM)이면 비워두어도 됩니다 (ESP32-CAM은 .ino 또는 config에서 직접 WiFi 설정)</p>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-semibold mb-2">WiFi 비밀번호 <span class="text-gray-400 font-normal">(아두이노 R4용, 선택)</span></label>
+                    <input type="password" id="moduleWifiPassword" placeholder="WiFi 비밀번호를 입력하세요"
+                        class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">아두이노 R4 모듈이 이 WiFi에 자동으로 연결됩니다. 카메라 전용 모듈이면 비워두세요.</p>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-semibold mb-2">카메라 스트림 URL <span class="text-gray-400 font-normal">(ESP32-CAM용, 선택)</span></label>
+                    <input type="url" id="moduleCameraStreamUrl" placeholder="예: http://192.168.0.100:81/stream"
+                        class="w-full py-2 px-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">
+                        ESP32-CAM 실시간 영상을 보려면 스트림 URL을 입력하세요. 형식: <code class="bg-gray-100 px-1 rounded">http://&lt;ESP32-CAM IP&gt;:81/stream</code>
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">
+                        등록 후 모듈 상세 페이지에 들어가면 실시간 카메라 섹션에 영상이 표시됩니다.
+                    </p>
                 </div>
                 <div class="flex space-x-4">
                     <button type="submit"
@@ -169,21 +187,44 @@
 
         document.getElementById('addModuleForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const errorDiv = document.getElementById('addModuleError');
+            errorDiv.classList.add('hidden');
+            errorDiv.textContent = '';
+
             const name = document.getElementById('moduleName').value.trim();
             const moduleId = document.getElementById('moduleId').value.trim();
-            const macAddress = document.getElementById('moduleMac').value.trim();
+            const wifiSsid = document.getElementById('moduleWifiSsid').value.trim();
+            const wifiPassword = document.getElementById('moduleWifiPassword').value.trim();
+            const cameraStreamUrl = document.getElementById('moduleCameraStreamUrl').value.trim();
 
             if (!name || !moduleId) {
-                alert('모듈 이름과 Module ID는 필수입니다.');
+                errorDiv.textContent = '모듈 이름과 모듈 ID를 입력해주세요.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // 아두이노 R4 모듈은 WiFi 필수, 카메라 전용은 WiFi 선택
+            const needsWifi = !cameraStreamUrl;
+            if (needsWifi && (!wifiSsid || !wifiPassword)) {
+                errorDiv.textContent = 'WiFi SSID와 비밀번호를 입력해주세요. (카메라 전용 모듈인 경우 카메라 스트림 URL만 입력하면 됩니다)';
+                errorDiv.classList.remove('hidden');
                 return;
             }
 
             try {
-                await modulesAPI.create(name, moduleId, macAddress);
+                await modulesAPI.create(
+                    name, 
+                    moduleId, 
+                    wifiSsid || null, 
+                    wifiPassword || null, 
+                    cameraStreamUrl || null
+                );
                 hideAddModuleModal();
                 loadModules();
             } catch (err) {
-                alert(err.response?.data?.message || '모듈 추가에 실패했습니다.');
+                const errorMessage = err.response?.data?.message || '모듈 추가에 실패했습니다.';
+                errorDiv.textContent = errorMessage;
+                errorDiv.classList.remove('hidden');
             }
         });
 

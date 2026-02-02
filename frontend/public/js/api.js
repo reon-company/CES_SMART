@@ -1,14 +1,14 @@
 // API 기본 설정
-// 로컬 개발: http://localhost:3000
-// 프로덕션: HTTPS 백엔드 필요 (Mixed Content 오류 방지)
+// 로컬에서 열어도 배포된 백엔드(43.203.141.2) 사용
+// 로컬 백엔드 사용 시: 아래를 'http://localhost:3000'으로 변경
 const getApiBaseUrl = () => {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     if (isLocal) {
-        return 'http://localhost:3000';
+        return 'http://43.203.141.2:3000';
     }
 
-    // 프로덕션: HTTPS 사용 (Let's Encrypt 인증서 발급 완료)
+    // 프로덕션: HTTPS 또는 배포 서버
     return 'https://CES-smart.reonaicoffee.com';
 };
 
@@ -148,14 +148,24 @@ const modulesAPI = {
         return apiRequest(`/api/modules/${id}`);
     },
 
-    create: async (name, moduleId, macAddress = null) => {
-        const body = { name, module_id: moduleId };
-        if (macAddress) {
-            body.macAddress = macAddress;
-        }
+    create: async (name, moduleId, wifiSsid = null, wifiPassword = null, cameraStreamUrl = null) => {
+        const body = { 
+            name, 
+            module_id: moduleId,
+            wifi_ssid: wifiSsid || null,
+            wifi_password: wifiPassword || null,
+            camera_stream_url: cameraStreamUrl || null
+        };
         return apiRequest('/api/modules', {
             method: 'POST',
             body: JSON.stringify(body),
+        });
+    },
+
+    update: async (id, data) => {
+        return apiRequest(`/api/modules/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
         });
     },
 

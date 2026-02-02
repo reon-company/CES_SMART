@@ -1,9 +1,10 @@
 import { useRouter } from 'next/router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../../../components/Layout/DashboardLayout';
 import SensorPanel from '../../../components/SensorPanel/SensorPanel';
 import SensorChart from '../../../components/SensorPanel/SensorChart';
 import ActuatorControl from '../../../components/ActuatorControl/ActuatorControl';
+import EditModuleModal from '../../../components/ModuleList/EditModuleModal';
 import { modulesAPI } from '../../../lib/api/modules';
 import { isAuthenticated } from '../../../lib/auth';
 
@@ -12,6 +13,10 @@ export default function ModuleDetailPage() {
   const { moduleId } = router.query;
   const [module, setModule] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [cameraError, setCameraError] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+  const cameraImgRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -23,6 +28,10 @@ export default function ModuleDetailPage() {
       fetchModule();
     }
   }, [moduleId, router]);
+
+  useEffect(() => {
+    setCameraError(false);
+  }, [module?.camera_stream_url]);
 
   const fetchModule = async () => {
     try {
@@ -51,6 +60,23 @@ export default function ModuleDetailPage() {
         {config.text}
       </span>
     );
+  };
+
+  const handleUpdateModule = async (updateData) => {
+    try {
+      setUpdateError('');
+      const response = await modulesAPI.update(moduleId, updateData);
+      if (response.success) {
+        setModule(response.module);
+        setShowEditModal(false);
+        // 카메라 URL이 변경되면 에러 상태 초기화
+        if (updateData.camera_stream_url !== undefined) {
+          setCameraError(false);
+        }
+      }
+    } catch (error) {
+      throw new Error(error.response?.data?.message || '모듈 수정에 실패했습니다.');
+    }
   };
 
   if (loading) {
@@ -95,7 +121,16 @@ export default function ModuleDetailPage() {
               <span>←</span>
               <span>모듈 목록으로 돌아가기</span>
             </button>
-            {getStatusBadge(module.status)}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center space-x-2"
+              >
+                <span>✏️</span>
+                <span>수정</span>
+              </button>
+              {getStatusBadge(module.status)}
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-5xl">🔌</div>
@@ -104,6 +139,90 @@ export default function ModuleDetailPage() {
               <p className="text-gray-600">모듈 ID: <span className="font-mono font-semibold">{module.module_id}</span></p>
             </div>
           </div>
+        </div>
+
+        {updateError && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {updateError}
+          </div>
+        )}
+
+        {/* 실시간 카메라 섹션 (항상 표시) */}
+        <div className="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <span className="text-3xl">📷</span>
+              <h2 className="text-2xl font-bold text-gray-900">실시간 카메라</h2>
+            </div>
+            {module.camera_stream_url && (
+              <button
+                onClick={() => {
+                  setCameraError(false);
+                  if (cameraImgRef.current && module.camera_stream_url) {
+                    cameraImgRef.current.src = module.camera_stream_url + (module.camera_stream_url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                  }
+                }}
+                className="text-sm text-blue-500 hover:text-blue-700 font-medium flex items-center space-x-1"
+              >
+                <span>🔄</span>
+                <span>새로고침</span>
+              </button>
+            )}
+          </div>
+          <div className={`rounded-lg overflow-hidden border-2 border-gray-200 ${module.camera_stream_url ? 'bg-gray-100 aspect-video max-w-6xl mx-auto' : 'bg-gray-50'} flex items-center justify-center ${module.camera_stream_url ? 'min-h-[400px]' : 'min-h-[300px]'}`}>
+            {!module.camera_stream_url ? (
+              <div className="text-center p-8">
+                <div className="text-6xl mb-4">📷</div>
+                <p className="text-gray-700 font-semibold mb-2">카메라 스트림 URL이 설정되지 않았습니다</p>
+                <p className="text-gray-500 text-sm mb-4">
+                  모듈 수정 버튼을 클릭하여 카메라 스트림 URL을 입력하세요.
+                </p>
+                <p className="text-gray-400 text-xs">
+                  형식: <code className="bg-gray-200 px-2 py-1 rounded">http://&lt;ESP32-CAM IP&gt;:81/stream</code>
+                </p>
+                <p className="text-gray-400 text-xs mt-2">
+                  예: <code className="bg-gray-200 px-2 py-1 rounded">http://192.168.1.13:81/stream</code>
+                </p>
+              </div>
+            ) : cameraError ? (
+              <div className="text-center p-8">
+                <p className="text-gray-500 mb-4">
+                  카메라에 연결할 수 없습니다.<br />
+                  ESP32-CAM이 같은 네트워크에 있는지, 스트림 URL이 맞는지 확인해주세요.
+                </p>
+                <button
+                  onClick={() => {
+                    setCameraError(false);
+                    if (cameraImgRef.current && module.camera_stream_url) {
+                      cameraImgRef.current.src = module.camera_stream_url + (module.camera_stream_url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                    }
+                  }}
+                  className="text-blue-500 hover:text-blue-700 font-medium"
+                >
+                  다시 시도
+                </button>
+              </div>
+            ) : (
+              <img
+                ref={cameraImgRef}
+                src={module.camera_stream_url}
+                alt="실시간 카메라 영상"
+                className="w-full h-full object-contain"
+                onError={() => setCameraError(true)}
+                onLoad={() => setCameraError(false)}
+              />
+            )}
+          </div>
+          {module.camera_stream_url && (
+            <>
+              <p className="mt-4 text-sm text-gray-500">
+                스트림 URL: <span className="font-mono break-all">{module.camera_stream_url}</span>
+              </p>
+              <p className="mt-2 text-xs text-gray-400">
+                💡 ESP32-CAM과 같은 네트워크에 연결되어 있어야 실시간 영상을 볼 수 있습니다.
+              </p>
+            </>
+          )}
         </div>
 
         {/* 센서 데이터 섹션 */}
@@ -150,6 +269,17 @@ export default function ModuleDetailPage() {
           <ActuatorControl moduleId={module.module_id} />
         </div>
       </div>
+
+      {showEditModal && (
+        <EditModuleModal
+          module={module}
+          onClose={() => {
+            setShowEditModal(false);
+            setUpdateError('');
+          }}
+          onUpdate={handleUpdateModule}
+        />
+      )}
     </DashboardLayout>
   );
 }

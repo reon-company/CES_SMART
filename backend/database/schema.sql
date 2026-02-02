@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS modules (
   module_id VARCHAR(50) UNIQUE NOT NULL,
   wifi_ssid VARCHAR(255) DEFAULT NULL COMMENT 'WiFi SSID',
   wifi_password VARCHAR(255) DEFAULT NULL COMMENT 'WiFi Password (암호화 권장)',
+  camera_stream_url VARCHAR(512) DEFAULT NULL COMMENT 'ESP32-CAM 실시간 스트림 URL (예: http://192.168.0.100:81/stream)',
   status ENUM('active', 'inactive', 'error') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

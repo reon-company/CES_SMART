@@ -57,10 +57,19 @@ setInterval(() => {
 }, 3600000); // 1시간
 
 // Middleware
-// CORS 설정: 여러 origin을 배열로 처리
-const corsOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : ['http://localhost:3001'];
+// CORS 설정: 여러 origin 허용 (로컬 개발 + 프로덕션)
+const defaultCorsOrigins = [
+  'http://localhost:3001',
+  'http://localhost:5500',
+  'http://127.0.0.1:3001',
+  'http://127.0.0.1:5500',
+];
+const corsOrigins = process.env.CORS_ORIGIN
+  ? [
+      ...defaultCorsOrigins,
+      ...process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean),
+    ]
+  : defaultCorsOrigins;
 
 app.use(cors({
   origin: corsOrigins,

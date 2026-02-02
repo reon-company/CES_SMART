@@ -17,7 +17,7 @@
 #define API_ACTUATORS_CONTROL_ENDPOINT "/api/actuators/control"
 
 // Module Configuration
-#define MODULE_ID "MODULE_004"  // 각 모듈마다 고유 ID 설정 필요
+#define MODULE_ID "MODULE_001"  // 각 모듈마다 고유 ID 설정 필요
 
 // Sensor Pin Configuration
 #define DHT11_PIN 2             // DHT11 온도/습도 센서 (디지털 핀)

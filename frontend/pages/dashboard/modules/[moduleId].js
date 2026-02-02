@@ -223,10 +223,22 @@ export default function ModuleDetailPage() {
               </div>
             ) : cameraError ? (
               <div className="text-center p-8">
-                <p className="text-gray-500 mb-4">
-                  카메라에 연결할 수 없습니다.<br />
-                  ESP32-CAM이 같은 네트워크에 있는지, 스트림 URL이 맞는지 확인해주세요.
-                </p>
+                <div className="text-6xl mb-4">❌</div>
+                <p className="text-gray-700 font-semibold mb-2">카메라에 연결할 수 없습니다</p>
+                <div className="text-gray-600 text-sm mb-4 space-y-2">
+                  <p>서버가 ESP32-CAM의 로컬 네트워크에 접근할 수 없습니다.</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    <strong>원인:</strong> 서버(43.201.148.223)와 ESP32-CAM(192.168.1.x)이 서로 다른 네트워크에 있습니다.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    <strong>해결 방법:</strong>
+                  </p>
+                  <ul className="text-xs text-gray-500 text-left max-w-md mx-auto mt-2 space-y-1">
+                    <li>• VPN 설정: 서버를 ESP32-CAM 네트워크에 연결</li>
+                    <li>• 포트 포워딩: 라우터에서 ESP32-CAM 포트 열기</li>
+                    <li>• 터널링 서비스: ngrok 등 사용</li>
+                  </ul>
+                </div>
                 <button
                   onClick={() => {
                     setCameraError(false);
@@ -238,7 +250,7 @@ export default function ModuleDetailPage() {
                         : proxyUrl + (proxyUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
                     }
                   }}
-                  className="text-blue-500 hover:text-blue-700 font-medium"
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg transition"
                 >
                   다시 시도
                 </button>
@@ -260,7 +272,7 @@ export default function ModuleDetailPage() {
                 스트림 URL: <span className="font-mono break-all">{module.camera_stream_url}</span>
               </p>
               <p className="mt-2 text-xs text-gray-400">
-                💡 ESP32-CAM과 같은 네트워크에 연결되어 있어야 실시간 영상을 볼 수 있습니다.
+                ⚠️ 서버가 ESP32-CAM의 로컬 IP에 접근하려면 VPN 또는 포트 포워딩이 필요합니다.
               </p>
             </>
           )}

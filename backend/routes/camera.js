@@ -111,12 +111,25 @@ router.get('/:moduleId/stream', async (req, res, next) => {
       });
 
       proxyReq.on('error', (err) => {
-        console.error('Proxy request error:', err);
+        console.error('Proxy request error:', {
+          message: err.message,
+          code: err.code,
+          streamUrl: streamUrl,
+          hostname: url.hostname,
+          port: url.port || (isHttps ? 443 : 80)
+        });
         if (!res.headersSent) {
+          // 네트워크 연결 오류인 경우 더 자세한 메시지 제공
+          let errorMessage = 'Failed to connect to camera';
+          if (err.code === 'ETIMEDOUT' || err.code === 'ECONNREFUSED' || err.code === 'ENETUNREACH') {
+            errorMessage = `Cannot reach camera at ${url.hostname}. Server cannot access local network IP. VPN or port forwarding may be required.`;
+          }
           res.status(502).json({
             success: false,
-            message: 'Failed to connect to camera',
-            error: err.message
+            message: errorMessage,
+            error: err.message,
+            code: err.code,
+            cameraUrl: streamUrl
           });
         } else {
           res.end();
@@ -124,12 +137,18 @@ router.get('/:moduleId/stream', async (req, res, next) => {
       });
 
       proxyReq.on('timeout', () => {
-        console.error('Proxy request timeout');
+        console.error('Proxy request timeout:', {
+          streamUrl: streamUrl,
+          hostname: url.hostname,
+          port: url.port || (isHttps ? 443 : 80),
+          timeout: options.timeout
+        });
         proxyReq.destroy();
         if (!res.headersSent) {
           res.status(504).json({
             success: false,
-            message: 'Camera connection timeout'
+            message: `Camera connection timeout. Server cannot reach ${url.hostname}. Check if ESP32-CAM is on the same network or VPN is configured.`,
+            cameraUrl: streamUrl
           });
         } else {
           res.end();

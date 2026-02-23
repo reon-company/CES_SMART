@@ -16,6 +16,9 @@
 #include "esp_camera.h"
 #include "img_converters.h"
 #include "fb_gfx.h"
+#include <Arduino.h>
+#include <WiFi.h>
+#include <ctype.h>
 #include "esp32-hal-ledc.h"
 #include "sdkconfig.h"
 #include "camera_index.h"
@@ -46,6 +49,12 @@ static const char *_STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %
 
 httpd_handle_t stream_httpd = NULL;
 httpd_handle_t camera_httpd = NULL;
+
+extern String activeSsid;
+extern String activePassword;
+extern bool connectWiFi(const String &ssid, const String &password);
+extern void saveWiFiConfig(const String &ssid, const String &password);
+extern void clearWiFiConfig();
 
 typedef struct {
   size_t size;   //number of values used for filtering
@@ -667,6 +676,95 @@ static esp_err_t index_handler(httpd_req_t *req) {
   }
 }
 
+static String urlDecode(const char *src) {
+  String out;
+  char a, b;
+  while (*src) {
+    if ((*src == '%') && ((a = src[1]) && (b = src[2])) && isxdigit(a) && isxdigit(b)) {
+      if (a >= 'a') a -= 'a' - 'A';
+      if (a >= 'A') a -= ('A' - 10);
+      else a -= '0';
+      if (b >= 'a') b -= 'a' - 'A';
+      if (b >= 'A') b -= ('A' - 10);
+      else b -= '0';
+      out += char(16 * a + b);
+      src += 3;
+      continue;
+    }
+    if (*src == '+') out += ' ';
+    else out += *src;
+    src++;
+  }
+  return out;
+}
+
+static esp_err_t wifi_page_handler(httpd_req_t *req) {
+  String html = "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>";
+  html += "<title>ESP32-CAM WiFi Setup</title><style>body{font-family:Arial,sans-serif;max-width:720px;margin:24px auto;padding:0 16px}input{width:100%;padding:10px;margin:8px 0;box-sizing:border-box}button{padding:10px 14px;margin-right:8px}.card{border:1px solid #ddd;border-radius:10px;padding:16px;margin-bottom:14px}</style></head><body>";
+  html += "<h2>ESP32-CAM WiFi 설정</h2>";
+  html += "<div class='card'><b>현재 연결 SSID:</b> " + String(WiFi.SSID()) + "<br><b>IP:</b> " + String(WiFi.localIP().toString()) + "</div>";
+  html += "<div class='card'><form action='/wifi/set' method='get'><label>SSID</label><input name='ssid' value='" + activeSsid + "' required>";
+  html += "<label>Password</label><input type='password' name='password' placeholder='새 비밀번호 입력 (변경 없으면 기존 입력 필요)'>";
+  html += "<button type='submit'>저장 후 재연결</button></form></div>";
+  html += "<div class='card'><a href='/wifi/clear'><button>저장 WiFi 초기화</button></a> <a href='/'><button>카메라 UI로 돌아가기</button></a></div>";
+  html += "<p>저장값은 NVS에 보관되어 재부팅 후에도 유지됩니다.</p></body></html>";
+
+  httpd_resp_set_type(req, "text/html");
+  return httpd_resp_send(req, html.c_str(), html.length());
+}
+
+static esp_err_t wifi_set_handler(httpd_req_t *req) {
+  char *buf = NULL;
+  char ssidRaw[128];
+  char passwordRaw[128];
+
+  if (parse_get(req, &buf) != ESP_OK) {
+    return ESP_FAIL;
+  }
+
+  if (httpd_query_key_value(buf, "ssid", ssidRaw, sizeof(ssidRaw)) != ESP_OK) {
+    free(buf);
+    httpd_resp_send_404(req);
+    return ESP_FAIL;
+  }
+
+  passwordRaw[0] = '\0';
+  httpd_query_key_value(buf, "password", passwordRaw, sizeof(passwordRaw));
+  free(buf);
+
+  String newSsid = urlDecode(ssidRaw);
+  String newPassword = urlDecode(passwordRaw);
+  newSsid.trim();
+  newPassword.trim();
+
+  if (newSsid.length() == 0) {
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_send(req, "{\"success\":false,\"message\":\"ssid is required\"}", HTTPD_RESP_USE_STRLEN);
+  }
+
+  if (newPassword.length() == 0) {
+    newPassword = activePassword;
+  }
+
+  saveWiFiConfig(newSsid, newPassword);
+  bool connected = connectWiFi(newSsid, newPassword);
+
+  if (connected) {
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_send(req, "{\"success\":true,\"message\":\"wifi updated and connected\"}", HTTPD_RESP_USE_STRLEN);
+  }
+
+  httpd_resp_set_type(req, "application/json");
+  return httpd_resp_send(req, "{\"success\":false,\"message\":\"wifi saved but connect failed\"}", HTTPD_RESP_USE_STRLEN);
+}
+
+static esp_err_t wifi_clear_handler(httpd_req_t *req) {
+  clearWiFiConfig();
+  connectWiFi(activeSsid, activePassword);
+  httpd_resp_set_type(req, "application/json");
+  return httpd_resp_send(req, "{\"success\":true,\"message\":\"saved wifi cleared and fallback applied\"}", HTTPD_RESP_USE_STRLEN);
+}
+
 void startCameraServer() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.max_uri_handlers = 16;
@@ -814,6 +912,45 @@ void startCameraServer() {
 #endif
   };
 
+  httpd_uri_t wifi_page_uri = {
+    .uri = "/wifi",
+    .method = HTTP_GET,
+    .handler = wifi_page_handler,
+    .user_ctx = NULL
+#ifdef CONFIG_HTTPD_WS_SUPPORT
+    ,
+    .is_websocket = true,
+    .handle_ws_control_frames = false,
+    .supported_subprotocol = NULL
+#endif
+  };
+
+  httpd_uri_t wifi_set_uri = {
+    .uri = "/wifi/set",
+    .method = HTTP_GET,
+    .handler = wifi_set_handler,
+    .user_ctx = NULL
+#ifdef CONFIG_HTTPD_WS_SUPPORT
+    ,
+    .is_websocket = true,
+    .handle_ws_control_frames = false,
+    .supported_subprotocol = NULL
+#endif
+  };
+
+  httpd_uri_t wifi_clear_uri = {
+    .uri = "/wifi/clear",
+    .method = HTTP_GET,
+    .handler = wifi_clear_handler,
+    .user_ctx = NULL
+#ifdef CONFIG_HTTPD_WS_SUPPORT
+    ,
+    .is_websocket = true,
+    .handle_ws_control_frames = false,
+    .supported_subprotocol = NULL
+#endif
+  };
+
   ra_filter_init(&ra_filter, 20);
 
   log_i("Starting web server on port: '%d'", config.server_port);
@@ -829,6 +966,9 @@ void startCameraServer() {
     httpd_register_uri_handler(camera_httpd, &greg_uri);
     httpd_register_uri_handler(camera_httpd, &pll_uri);
     httpd_register_uri_handler(camera_httpd, &win_uri);
+    httpd_register_uri_handler(camera_httpd, &wifi_page_uri);
+    httpd_register_uri_handler(camera_httpd, &wifi_set_uri);
+    httpd_register_uri_handler(camera_httpd, &wifi_clear_uri);
   }
 
   config.server_port += 1;

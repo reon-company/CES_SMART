@@ -30,9 +30,9 @@
                     <h1 class="text-2xl font-bold">모듈 상세</h1>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <button onclick="showEditModal()"
+                    <button onclick="goModuleSettings()"
                         class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">
-                        수정
+                        세팅
                     </button>
                     <span id="userEmail" class="text-sm">로딩 중...</span>
                     <button onclick="auth.logout()"
@@ -72,7 +72,7 @@
                         <div class="text-6xl mb-4">📷</div>
                         <p class="text-gray-700 font-semibold mb-2">카메라 스트림 URL이 설정되지 않았습니다</p>
                         <p class="text-gray-500 text-sm mb-4">
-                            모듈 수정 버튼을 클릭하여 카메라 스트림 URL을 입력하세요.
+                            모듈 세팅 버튼을 클릭하여 카메라 스트림 URL을 입력하세요.
                         </p>
                         <p class="text-gray-400 text-xs">
                             형식: <code class="bg-gray-200 px-2 py-1 rounded">http://&lt;ESP32-CAM IP&gt;:81/stream</code>
@@ -797,6 +797,16 @@
             if (sensorUpdateInterval) clearInterval(sensorUpdateInterval);
             if (relayUpdateInterval) clearInterval(relayUpdateInterval);
         });
+
+        // 세팅 페이지로 이동
+        window.goModuleSettings = function() {
+            const currentModuleId = window.moduleId || moduleId;
+            if (!currentModuleId) {
+                alert('모듈 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            window.location.href = `module-settings.html?id=${encodeURIComponent(currentModuleId)}`;
+        };
 
         // 수정 모달 관련 함수 (전역 접근 가능하도록)
         window.showEditModal = function() {

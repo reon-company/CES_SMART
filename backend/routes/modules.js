@@ -120,7 +120,7 @@ router.post('/', auth, moduleValidation, validate, async (req, res) => {
 // @access  Private
 router.put('/:moduleId', auth, async (req, res) => {
   try {
-    const { name, status, wifi_ssid, wifi_password, camera_stream_url } = req.body;
+    const { name, status, wifi_ssid, wifi_password, camera_stream_url, module_id } = req.body;
 
     console.log('Update module request:', {
       moduleId: req.params.moduleId,
@@ -137,7 +137,29 @@ router.put('/:moduleId', auth, async (req, res) => {
       });
     }
 
-    // Update module
+    // module_id 변경 처리 (선택)
+    let moduleIdChanged = false;
+    if (typeof module_id === 'string' && module_id.trim() && module_id.trim() !== module.module_id) {
+      const renameResult = await Module.updateModuleId(req.params.moduleId, req.user.id, module_id.trim());
+      if (!renameResult.updated) {
+        if (renameResult.reason === 'DUPLICATE') {
+          return res.status(400).json({
+            success: false,
+            message: 'Module ID already exists'
+          });
+        }
+        if (renameResult.reason !== 'NO_CHANGE') {
+          return res.status(400).json({
+            success: false,
+            message: 'Module ID update failed'
+          });
+        }
+      } else {
+        moduleIdChanged = true;
+      }
+    }
+
+    // Update module (module_id 제외)
     const updateData = {
       name,
       status,
@@ -150,7 +172,7 @@ router.put('/:moduleId', auth, async (req, res) => {
     
     const updated = await Module.update(req.params.moduleId, req.user.id, updateData);
 
-    if (!updated) {
+    if (!updated && !moduleIdChanged) {
       return res.status(400).json({
         success: false,
         message: 'No changes made'

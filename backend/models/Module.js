@@ -92,6 +92,78 @@ class Module {
     return result.affectedRows > 0;
   }
 
+  static async updateModuleId(id, userId, nextModuleId) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [rows] = await connection.execute(
+        'SELECT module_id FROM modules WHERE id = ? AND user_id = ?',
+        [id, userId]
+      );
+      const current = rows[0];
+      if (!current) {
+        await connection.rollback();
+        return { updated: false, reason: 'NOT_FOUND' };
+      }
+
+      const previousModuleId = current.module_id;
+      if (previousModuleId === nextModuleId) {
+        await connection.rollback();
+        return { updated: false, reason: 'NO_CHANGE' };
+      }
+
+      const [dupRows] = await connection.execute(
+        'SELECT id FROM modules WHERE module_id = ? LIMIT 1',
+        [nextModuleId]
+      );
+      if (dupRows.length > 0) {
+        await connection.rollback();
+        return { updated: false, reason: 'DUPLICATE' };
+      }
+
+      // NOTE:
+      // schema has foreign keys referencing modules.module_id without ON UPDATE CASCADE.
+      // Keep all related rows aligned in a single transaction.
+      await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+
+      await connection.execute(
+        'UPDATE sensor_data SET module_id = ? WHERE module_id = ?',
+        [nextModuleId, previousModuleId]
+      );
+      await connection.execute(
+        'UPDATE actuator_status SET module_id = ? WHERE module_id = ?',
+        [nextModuleId, previousModuleId]
+      );
+      await connection.execute(
+        'UPDATE thresholds SET module_id = ? WHERE module_id = ?',
+        [nextModuleId, previousModuleId]
+      );
+      const [moduleResult] = await connection.execute(
+        'UPDATE modules SET module_id = ? WHERE id = ? AND user_id = ?',
+        [nextModuleId, id, userId]
+      );
+
+      await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+      await connection.commit();
+
+      return {
+        updated: moduleResult.affectedRows > 0,
+        reason: moduleResult.affectedRows > 0 ? 'UPDATED' : 'NO_CHANGE',
+      };
+    } catch (error) {
+      try {
+        await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+      } catch (_) {
+        // ignore reset error
+      }
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
   static async delete(id, userId) {
     const [result] = await pool.execute(
       'DELETE FROM modules WHERE id = ? AND user_id = ?',

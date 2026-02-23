@@ -55,6 +55,12 @@ const getAuthorizedModule = async (moduleId, userId) => {
   return { module };
 };
 
+const getCameraBaseUrl = (streamUrl) => {
+  const url = new URL(streamUrl);
+  const targetPort = url.port || (url.protocol === 'https:' ? '443' : '80');
+  return `${url.protocol}//${url.hostname}:${targetPort}`;
+};
+
 // @route   GET /api/camera/:moduleId/health
 // @desc    Check camera stream reachability
 // @access  Private (token in query or header)
@@ -120,6 +126,87 @@ router.get('/:moduleId/health', withQueryTokenAuth, async (req, res) => {
   } catch (error) {
     console.error('Camera health check error:', error);
     sendProxyError(res, 500, 'INTERNAL_ERROR', 'Server error during camera health check');
+  }
+});
+
+// @route   POST /api/camera/:moduleId/wifi
+// @desc    Configure ESP32-CAM WiFi via backend proxy
+// @access  Private
+router.post('/:moduleId/wifi', auth, async (req, res) => {
+  try {
+    const { moduleId } = req.params;
+    const userId = req.user.id;
+    const ssid = String(req.body?.ssid || '').trim();
+    const password = String(req.body?.password || '');
+
+    if (!ssid) {
+      return res.status(400).json({
+        success: false,
+        message: 'SSID is required',
+      });
+    }
+
+    const moduleResult = await getAuthorizedModule(moduleId, userId);
+    if (!moduleResult.module) {
+      return res.status(moduleResult.status).json(moduleResult.body);
+    }
+
+    const baseUrl = getCameraBaseUrl(moduleResult.module.camera_stream_url);
+    const configUrl = `${baseUrl}/wifi/set?ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`;
+    const target = new URL(configUrl);
+    const isHttps = target.protocol === 'https:';
+    const client = isHttps ? https : http;
+    const targetPort = target.port || (isHttps ? 443 : 80);
+
+    const options = {
+      hostname: target.hostname,
+      port: targetPort,
+      path: target.pathname + target.search,
+      method: 'GET',
+      timeout: HEALTH_TIMEOUT_MS,
+      headers: {
+        'User-Agent': 'CES-SmartFarm-Proxy/1.0',
+      },
+    };
+
+    const proxyReq = client.request(options, (proxyRes) => {
+      let responseText = '';
+      proxyRes.on('data', (chunk) => {
+        responseText += chunk.toString();
+      });
+      proxyRes.on('end', () => {
+        const ok = proxyRes.statusCode >= 200 && proxyRes.statusCode < 300;
+        res.status(ok ? 200 : 502).json({
+          success: ok,
+          statusCode: proxyRes.statusCode,
+          message: ok ? 'ESP32-CAM WiFi settings applied' : 'Failed to apply ESP32-CAM WiFi settings',
+          cameraResponse: responseText.slice(0, 4000),
+          target: `${target.hostname}:${targetPort}`,
+        });
+      });
+    });
+
+    proxyReq.on('timeout', () => {
+      proxyReq.destroy(new Error('Camera WiFi setting timeout'));
+    });
+
+    proxyReq.on('error', (err) => {
+      sendProxyError(
+        res,
+        isRetryableNetworkError(err.code) ? 504 : 502,
+        err.code || 'CAMERA_WIFI_CONFIG_ERROR',
+        'Failed to reach ESP32-CAM WiFi config endpoint',
+        {
+          error: err.message,
+          target: `${target.hostname}:${targetPort}`,
+        }
+      );
+    });
+
+    proxyReq.end();
+  } catch (error) {
+    console.error('Camera WiFi config error:', error);
+    sendProxyError(res, 500, 'INTERNAL_ERROR', 'Server error during camera WiFi config');
   }
 });
 

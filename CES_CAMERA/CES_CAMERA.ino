@@ -1,20 +1,154 @@
 //https://blog.naver.com/no1_devicemart/223018835439
 #include "esp_camera.h"
 #include <WiFi.h>
+#include <Preferences.h>
 
 // ===========================
 // Select camera model in board_config.h
 // ===========================
 #include "board_config.h"
-
-// ===========================
-// Enter your WiFi credentials
-// ===========================
-const char *ssid = "REON9999";
-const char *password = "999999999999";
+#include "camera_wifi_config.h"
 
 void startCameraServer();
 void setupLedFlash();
+
+Preferences wifiPrefs;
+String activeSsid;
+String activePassword;
+
+bool connectWiFi(const String &ssid, const String &password) {
+  Serial.printf("WiFi connecting to SSID: %s\n", ssid.c_str());
+
+  WiFi.disconnect(true, true);
+  delay(300);
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+  WiFi.begin(ssid.c_str(), password.c_str());
+
+  const unsigned long start = millis();
+  const unsigned long timeoutMs = 20000;
+  while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println();
+    Serial.println("WiFi connected");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+    return true;
+  }
+
+  Serial.println();
+  Serial.println("WiFi connection timeout");
+  return false;
+}
+
+void loadWiFiConfig() {
+  wifiPrefs.begin("camera-wifi", true);
+  activeSsid = wifiPrefs.getString("ssid", CAMERA_WIFI_SSID);
+  activePassword = wifiPrefs.getString("password", CAMERA_WIFI_PASSWORD);
+  wifiPrefs.end();
+
+  if (activeSsid.length() == 0) {
+    activeSsid = CAMERA_WIFI_SSID;
+  }
+}
+
+void saveWiFiConfig(const String &ssid, const String &password) {
+  wifiPrefs.begin("camera-wifi", false);
+  wifiPrefs.putString("ssid", ssid);
+  wifiPrefs.putString("password", password);
+  wifiPrefs.end();
+
+  activeSsid = ssid;
+  activePassword = password;
+}
+
+void clearWiFiConfig() {
+  wifiPrefs.begin("camera-wifi", false);
+  wifiPrefs.remove("ssid");
+  wifiPrefs.remove("password");
+  wifiPrefs.end();
+
+  activeSsid = CAMERA_WIFI_SSID;
+  activePassword = CAMERA_WIFI_PASSWORD;
+}
+
+void printConfigHelp() {
+  Serial.println();
+  Serial.println("=== WiFi Config Commands ===");
+  Serial.println("HELP");
+  Serial.println("SHOW_WIFI");
+  Serial.println("SET_WIFI <ssid> <password>");
+  Serial.println("CLEAR_WIFI");
+  Serial.println("REBOOT");
+  Serial.println("============================");
+}
+
+void handleSerialConfig() {
+  if (!Serial.available()) {
+    return;
+  }
+
+  String line = Serial.readStringUntil('\n');
+  line.trim();
+  if (line.length() == 0) {
+    return;
+  }
+
+  if (line.equalsIgnoreCase("HELP")) {
+    printConfigHelp();
+    return;
+  }
+
+  if (line.equalsIgnoreCase("SHOW_WIFI")) {
+    Serial.printf("ACTIVE_SSID=%s\n", activeSsid.c_str());
+    Serial.printf("ACTIVE_PASSWORD_LEN=%d\n", activePassword.length());
+    return;
+  }
+
+  if (line.startsWith("SET_WIFI ")) {
+    String payload = line.substring(9);
+    int separator = payload.indexOf(' ');
+    if (separator <= 0 || separator >= payload.length() - 1) {
+      Serial.println("Invalid format. Use: SET_WIFI <ssid> <password>");
+      return;
+    }
+
+    String newSsid = payload.substring(0, separator);
+    String newPassword = payload.substring(separator + 1);
+    newSsid.trim();
+    newPassword.trim();
+    if (newSsid.length() == 0) {
+      Serial.println("SSID cannot be empty");
+      return;
+    }
+
+    saveWiFiConfig(newSsid, newPassword);
+    Serial.println("Saved WiFi config to NVS");
+    Serial.println("Reconnecting...");
+    connectWiFi(activeSsid, activePassword);
+    return;
+  }
+
+  if (line.equalsIgnoreCase("CLEAR_WIFI")) {
+    clearWiFiConfig();
+    Serial.println("Cleared saved WiFi config. Using fallback config.");
+    connectWiFi(activeSsid, activePassword);
+    return;
+  }
+
+  if (line.equalsIgnoreCase("REBOOT")) {
+    Serial.println("Rebooting...");
+    delay(300);
+    ESP.restart();
+    return;
+  }
+
+  Serial.println("Unknown command. Type HELP");
+}
 
 void setup() {
   Serial.begin(115200);
@@ -107,16 +241,9 @@ void setup() {
   setupLedFlash();
 #endif
 
-  WiFi.begin(ssid, password);
-  WiFi.setSleep(false);
-
-  Serial.print("WiFi connecting");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected");
+  loadWiFiConfig();
+  printConfigHelp();
+  connectWiFi(activeSsid, activePassword);
 
   startCameraServer();
 
@@ -126,6 +253,6 @@ void setup() {
 }
 
 void loop() {
-  // Do nothing. Everything is done in another task by the web server
-  delay(10000);
+  handleSerialConfig();
+  delay(20);
 }

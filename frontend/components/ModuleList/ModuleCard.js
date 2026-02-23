@@ -1,3 +1,5 @@
+// 유지보수 메모:
+// 카드 클릭 시맨틱(상세 열기) 및 삭제 동작은 ModuleList 콜백에 연결됩니다.
 export default function ModuleCard({ module, onDelete, onClick }) {
   const getStatusColor = (status) => {
     switch (status) {

@@ -3,6 +3,8 @@ import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import { sensorsAPI } from '../../lib/api/sensors';
 
+// 유지보수 메모:
+// 차트 시간 범위와 샘플 제한은 대시보드 성능에 맞게 조정되었습니다.
 export default function SensorChart({ moduleId, sensorType, title }) {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -122,6 +122,10 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
+        // 유지보수 메모:
+        // 이 페이지는 4개 운영 설정을 한 곳에 모아 관리합니다.
+        // Arduino WiFi, module_id, ESP32-CAM WiFi 프록시 적용, camera stream URL.
+        // payload 키는 backend routes/modules, routes/camera 계약과 반드시 맞춰야 합니다.
         if (!auth.isAuthenticated()) {
             window.location.href = 'login.html';
         }

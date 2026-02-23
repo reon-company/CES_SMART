@@ -93,6 +93,9 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
+        // 유지보수 메모:
+        // Web Serial은 보안 컨텍스트(HTTPS/localhost) + 지원 브라우저에서만 동작합니다.
+        // 연결 실패의 대부분은 다른 프로그램(IDE/터미널)이 COM 포트를 점유한 경우입니다.
         if (!auth.isAuthenticated()) {
             window.location.href = 'login.html';
         }

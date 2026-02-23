@@ -4,6 +4,9 @@ import { modulesAPI } from '../../lib/api/modules';
 import ModuleCard from './ModuleCard';
 import AddModuleModal from './AddModuleModal';
 
+// 유지보수 메모:
+// ModuleList는 Next.js UI의 주요 모듈 관리 오케스트레이터입니다.
+// 모달 생성/삭제 흐름을 정적 대시보드 동작과 일치시키세요.
 export default function ModuleList() {
   const router = useRouter();
   const [modules, setModules] = useState([]);

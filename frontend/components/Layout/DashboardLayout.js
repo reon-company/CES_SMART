@@ -5,6 +5,9 @@ import Header from './Header';
 import { authAPI } from '../../lib/api/auth';
 import { removeToken } from '../../lib/auth';
 
+// 유지보수 메모:
+// DashboardLayout은 인증된 셸 상태를 관리합니다. getMe 실패 시 오래된 권한 UI 표시를
+// 방지하기 위해 로그아웃 처리해야 합니다.
 export default function DashboardLayout({ children }) {
   const router = useRouter();
   const [user, setUser] = useState(null);

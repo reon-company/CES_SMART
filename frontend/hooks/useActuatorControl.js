@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { actuatorsAPI } from '../lib/api/actuators';
 
+// 유지보수 메모:
+// UI 반응성을 위해 제어 요청 후 즉시 로컬 상태를 업데이트합니다.
 export function useActuatorControl(moduleId) {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);

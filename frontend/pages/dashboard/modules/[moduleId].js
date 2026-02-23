@@ -8,6 +8,9 @@ import EditModuleModal from '../../../components/ModuleList/EditModuleModal';
 import { modulesAPI } from '../../../lib/api/modules';
 import { isAuthenticated } from '../../../lib/auth';
 
+// 유지보수 메모:
+// Next.js 모듈 상세는 public/module.html과 동작 동등성을 유지해야 합니다.
+// 특히 카메라 프록시 변환과 auth/토큰 시맨틱이 달라지면 안 됩니다.
 export default function ModuleDetailPage() {
   const router = useRouter();
   const { moduleId } = router.query;

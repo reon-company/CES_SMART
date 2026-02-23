@@ -1,6 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+// 유지보수 메모:
+// 이 루트 설정은 레거시 멀티센서 펌웨어 경로에 속합니다.
+// 업로드 전에 활성 펌웨어 브랜치와 MODULE_ID를 동기화하세요.
 // WiFi Configuration
 // 하드코딩 대신 WiFi AP 모드로 웹 설정 페이지 사용
 // 첫 부팅 시 "CES_SmartFarm_Setup" WiFi에 연결하여 설정

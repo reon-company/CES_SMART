@@ -4,6 +4,9 @@ const Module = require('../models/Module');
 const auth = require('../middleware/auth');
 const { actuatorControlValidation, validate } = require('../utils/validation');
 
+// 유지보수 메모:
+// 이 파일은 공개 아두이노 폴링 엔드포인트와 비공개 대시보드 제어 엔드포인트를 모두 제공합니다.
+// 파라미터화된 라우트가 특정 경로를 가릴 수 있으므로 라우트 선언 순서가 중요합니다.
 const router = express.Router();
 
 // IMPORTANT: More specific routes must come BEFORE less specific routes

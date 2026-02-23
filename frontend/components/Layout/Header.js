@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+// 유지보수 메모:
+// Header는 DashboardLayout에서 user 객체를 받습니다. prop 계약을 안정적으로 유지하세요.
 export default function Header({ user, onLogout }) {
   return (
     <header className="bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg">

@@ -6,6 +6,8 @@
 #include <ArduinoJson.h>
 #include "config.h"
 
+// 유지보수 메모:
+// main/main.ino 경로와의 호환성을 위해 레거시 API 클라이언트 변형을 유지합니다.
 class APIClient {
 private:
   HTTPClient http;

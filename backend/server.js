@@ -3,6 +3,11 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+// 유지보수 메모:
+// server.js는 런타임 정책의 단일 통합 지점입니다.
+// - 프로세스 생명주기 처리(SIGTERM/SIGINT, uncaught errors)
+// - Next.js/정적 HTML 클라이언트가 공용으로 쓰는 CORS 허용 정책
+// - 라우트 등록 순서(404/에러 핸들러는 반드시 마지막)
 const app = express();
 
 // Graceful shutdown 처리

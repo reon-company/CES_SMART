@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+// 유지보수 메모:
+// 즉각 반응성을 유지하기 위해 롤백 기능이 있는 낙관적 UI 토글이 적용됩니다.
 export default function ActuatorSwitch({ label, value, onChange, loading, icon }) {
   const [isOn, setIsOn] = useState(value || false);
   const [isChanging, setIsChanging] = useState(false);

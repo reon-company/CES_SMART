@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { sensorsAPI } from '../lib/api/sensors';
 
+// 유지보수 메모:
+// 폴링 간격 기본값은 펌웨어 전송 주기와 맞추기 위해 30초입니다.
 export function useSensorData(moduleId, interval = 30000) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);

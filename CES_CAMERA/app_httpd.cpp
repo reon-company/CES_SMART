@@ -24,6 +24,9 @@
 #include "camera_index.h"
 #include "board_config.h"
 
+// 유지보수 메모:
+// 이 파일은 카메라 HTTP 엔드포인트와 스트림 루프 동작을 정의합니다.
+// 여기 변경은 백엔드 카메라 프록시 호환성과 브라우저 렌더링에 직접 영향을 줍니다.
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
 #endif

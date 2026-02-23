@@ -260,6 +260,10 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
+        // 유지보수 메모:
+        // - 이 페이지는 카메라/센서/릴레이 정적 제어 UI입니다.
+        // - 카메라 렌더링은 반드시 백엔드 프록시 URL 변환을 거쳐야 합니다.
+        // - 모바일 overflow 방지를 위해 w-full + aspect-video 크기 정책을 유지해야 합니다.
         // API_BASE_URL is already defined in api.js, so we don't need to redeclare it
         
         if (!auth.isAuthenticated()) {

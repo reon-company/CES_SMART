@@ -1,3 +1,5 @@
+// 유지보수 메모:
+// 상태 색상은 표시용이며, 제어 로직으로 해석하지 마세요.
 export default function SensorCard({ title, value, unit, icon, threshold, status }) {
   const getStatusColor = () => {
     if (status === 'warning') return 'border-yellow-400 bg-yellow-50';

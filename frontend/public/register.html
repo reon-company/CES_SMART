@@ -73,6 +73,8 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
+        // 유지보수 메모:
+        // 회원가입은 로그인과 동일한 토큰/리다이렉트 정책을 유지합니다.
         // 이미 로그인된 경우 대시보드로 리다이렉트
         if (auth.isAuthenticated()) {
             window.location.href = 'dashboard.html';

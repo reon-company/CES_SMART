@@ -3,6 +3,9 @@
 // 1) window.CES_API_BASE_URL (명시적 설정)
 // 2) 운영 API 호스트
 // 3) localhost 개발 fallback
+// 유지보수 메모:
+// 정적 HTML 페이지는 이 파일을 공통 API 진입점으로 사용합니다.
+// 여기서 인증/base URL 정책을 바꾸면 login/dashboard/module 페이지가 함께 영향받습니다.
 const getApiBaseUrl = () => {
     const explicitBaseUrl = (window.CES_API_BASE_URL || '').trim();
     if (explicitBaseUrl) {

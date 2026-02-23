@@ -5,6 +5,10 @@ const { URL } = require('url');
 const Module = require('../models/Module');
 const auth = require('../middleware/auth');
 
+// 유지보수 메모:
+// 이 라우터는 운영 환경의 카메라 경계 계층입니다.
+// 프론트엔드는 카메라 LAN 직접 접근을 쓰지 말고, 여기의 프록시 엔드포인트를 사용해야 합니다.
+// 타임아웃/헤더/인증 정책 변경은 모바일 외부 스트리밍에 직접 영향을 줍니다.
 const router = express.Router();
 const CONNECT_TIMEOUT_MS = 15000;
 const HEALTH_TIMEOUT_MS = 5000;

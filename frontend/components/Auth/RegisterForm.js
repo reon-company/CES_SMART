@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import { authAPI } from '../../lib/api/auth';
 import { setToken } from '../../lib/auth';
 
+// 유지보수 메모:
+// 회원가입 흐름의 자동 로그인 동작은 백엔드 회원가입 토큰 응답과 일치해야 합니다.
 export default function RegisterForm() {
   const router = useRouter();
   const [formData, setFormData] = useState({

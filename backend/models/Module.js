@@ -1,5 +1,9 @@
 const pool = require('../config/database');
 
+// 유지보수 메모:
+// Module 모델은 대시보드와 하드웨어 사이의 식별자 경계를 관리합니다.
+// 현재 스키마에서 module_id는 다른 테이블에서 참조되므로,
+// module_id 변경 시 연관 테이블 동시 갱신(updateModuleId 트랜잭션)이 필요합니다.
 class Module {
   static async findByUserId(userId) {
     const [rows] = await pool.execute(

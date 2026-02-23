@@ -1,6 +1,8 @@
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 
+// 유지보수 메모:
+// 활성 라우트 매칭에 모듈 상세 하위 경로가 포함됩니다.
 export default function Sidebar() {
   const router = useRouter();
 

@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 
+// 유지보수 메모:
+// 빈 값 vs null 필드 의미는 의도적입니다:
+// - wifi_password가 빈 값 => 기존 유지
+// - camera_stream_url이 빈 값 => 값 초기화(null)
 export default function EditModuleModal({ module, onClose, onUpdate }) {
   const [formData, setFormData] = useState({
     name: '',

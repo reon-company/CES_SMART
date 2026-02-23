@@ -4,6 +4,9 @@
 #include <WiFiS3.h>
 #include <EEPROM.h>
 
+// 유지보수 메모:
+// 아래 EEPROM 레이아웃 상수는 이관/업데이트에 민감합니다.
+// 주소를 변경할 때는 데이터 마이그레이션 또는 초기화 전략을 반드시 함께 정의해야 합니다.
 // EEPROM 주소 정의
 #define EEPROM_SIZE 512
 #define EEPROM_SSID_ADDR 0

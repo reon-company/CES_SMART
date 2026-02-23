@@ -1,6 +1,8 @@
 #ifndef CAMERA_WIFI_CONFIG_H
 #define CAMERA_WIFI_CONFIG_H
 
+// 유지보수 메모:
+// 이 값은 초기 fallback 기본값입니다. 운영 중 변경값은 NVS에 저장되며 우선 적용됩니다.
 // ESP32-CAM 기본 WiFi 설정 (최초 부팅 fallback 값)
 // 운영 중에는 시리얼 명령으로 변경하면 NVS에 저장되어 재부팅 후에도 유지됩니다.
 // 예) SET_WIFI REON9999 999999999999

@@ -1,6 +1,8 @@
 import { useSensorData } from '../../hooks/useSensorData';
 import SensorCard from './SensorCard';
 
+// 유지보수 메모:
+// 로컬 임계값 기본값은 UI 힌트일 뿐이며, 서버 측 임계값 설정이 최종 적용됩니다.
 export default function SensorPanel({ moduleId }) {
   const { data, loading, error } = useSensorData(moduleId);
 

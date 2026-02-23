@@ -6,6 +6,9 @@ import { isAuthenticated } from '../../lib/auth';
 import { modulesAPI } from '../../lib/api/modules';
 import { sensorsAPI } from '../../lib/api/sensors';
 
+// 유지보수 메모:
+// 대시보드는 모듈 + 최신 센서 호출을 통합하므로 API 실패가 부분 UI로 이어질 수 있습니다.
+// 메인 네비게이션을 유지하려면 오류 처리를 보수적으로 유지하세요.
 export default function Dashboard() {
   const router = useRouter();
   const [modules, setModules] = useState([]);

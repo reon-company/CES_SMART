@@ -1,5 +1,8 @@
 const { body, validationResult } = require('express-validator');
 
+// 유지보수 메모:
+// 유효성 검사 규칙은 펌웨어 및 프론트엔드 클라이언트와의 API 계약 일부입니다.
+// 제약 완화 시 페이로드 품질 불일치를 피하려면 버전 관리에 신중하세요.
 // Validation rules
 const registerValidation = [
   body('email')

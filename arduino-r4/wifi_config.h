@@ -4,6 +4,9 @@
 #include <WiFiS3.h>
 #include <EEPROM.h>
 
+// 유지보수 메모:
+// 레거시 WiFi 설정 매니저는 CES_SmartFarm 변형과 동기화되어 있으며,
+// EEPROM 포맷이나 포털 동작 변경 시 동기화를 유지해야 합니다.
 // EEPROM 주소 정의
 #define EEPROM_SIZE 512
 #define EEPROM_SSID_ADDR 0

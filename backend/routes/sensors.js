@@ -4,6 +4,9 @@ const Module = require('../models/Module');
 const auth = require('../middleware/auth');
 const { sensorDataValidation, validate } = require('../utils/validation');
 
+// 유지보수 메모:
+// 센서 수집 라우트는 하드웨어-클라우드 주요 진입점입니다.
+// 배포된 아두이노 펌웨어와 요청 스키마의 하위 호환성을 유지하세요.
 const router = express.Router();
 
 // @route   POST /api/sensors

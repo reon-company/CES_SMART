@@ -178,6 +178,9 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
+        // 유지보수 메모:
+        // 데이터 페이지는 module.html과 동일한 모듈 소유권 및 토큰 제약을 공유합니다.
+        // moduleId(DB id)와 moduleModuleId(논리적 module_id) 구분을 명확히 유지하세요.
         if (!auth.isAuthenticated()) {
             window.location.href = 'login.html';
         }

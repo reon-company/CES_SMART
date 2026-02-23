@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { isAuthenticated } from '../lib/auth';
 
+// 유지보수 메모:
+// 랜딩 페이지는 인증 기반 리다이렉트 진입점 역할도 합니다.
+// 리다이렉트 타이밍 변경은 로그인 세션 지속성 인지에 영향을 줄 수 있습니다.
 export default function Home() {
   const router = useRouter();
 

@@ -1,5 +1,8 @@
 const pool = require('../config/database');
 
+// 유지보수 메모:
+// Threshold 레코드는 (module_id, sensor_type)마다 고유해야 합니다.
+// createOrUpdate 동작은 중복 설정 행 방지를 위해 UI에서 의존합니다.
 class Threshold {
   static async findByModuleId(moduleId) {
     const [rows] = await pool.execute(

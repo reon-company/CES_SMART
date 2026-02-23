@@ -1,5 +1,9 @@
 import axios from 'axios';
 
+// 유지보수 메모:
+// 이 클라이언트는 Next.js 페이지 전용입니다.
+// baseURL 결정/401 리다이렉트 정책은 public/js/api.js와 일치시켜
+// 정적 HTML과 Next.js UI의 동작을 동일하게 유지해야 합니다.
 const getApiBaseUrl = () => {
   const explicitBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').trim();
   if (explicitBaseUrl) {

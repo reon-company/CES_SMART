@@ -3,6 +3,9 @@
 #include <WiFi.h>
 #include <Preferences.h>
 
+// 유지보수 메모:
+// 이 스케치는 WiFi 영구저장(NVS)과 현장 복구용 시리얼 명령 UX를 함께 책임집니다.
+// 백엔드는 고정 LAN IP가 아니라 "카메라 도달 가능성"을 전제로 동작하므로, 네트워크 경로가 운영 핵심입니다.
 // ===========================
 // Select camera model in board_config.h
 // ===========================

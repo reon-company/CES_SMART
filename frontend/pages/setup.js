@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
 
+// 유지보수 메모:
+// 이 페이지는 public/setup.html의 Next.js 대응입니다.
+// 엔드포인트 및 출력 가정이 backend/routes/setup.js와 일치해야 합니다.
 export default function SetupPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);

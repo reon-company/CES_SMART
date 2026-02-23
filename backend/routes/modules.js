@@ -4,6 +4,10 @@ const ActuatorStatus = require('../models/ActuatorStatus');
 const auth = require('../middleware/auth');
 const { moduleValidation, validate } = require('../utils/validation');
 
+// 유지보수 메모:
+// 모듈 생명주기 관리의 기준 경로는 이 라우트입니다.
+// module_id 변경은 sensor/actuator/threshold 연결에 영향을 주므로,
+// Module.updateModuleId 트랜잭션 동작과 의미를 반드시 일치시켜야 합니다.
 const router = express.Router();
 const MAX_MODULES = 30;
 
@@ -140,6 +144,9 @@ router.put('/:moduleId', auth, async (req, res) => {
     // module_id 변경 처리 (선택)
     let moduleIdChanged = false;
     if (typeof module_id === 'string' && module_id.trim() && module_id.trim() !== module.module_id) {
+      // IMPORTANT:
+      // module_id is referenced by sensor_data/actuator_status/thresholds.
+      // Delegate to transactional model helper to keep cross-table identity consistent.
       const renameResult = await Module.updateModuleId(req.params.moduleId, req.user.id, module_id.trim());
       if (!renameResult.updated) {
         if (renameResult.reason === 'DUPLICATE') {

@@ -5,6 +5,9 @@
 #include <ArduinoJson.h>
 #include "config.h"
 
+// 유지보수 메모:
+// APIClient는 펌웨어 payload를 백엔드 API 계약과 연결하는 경계 계층입니다.
+// 백엔드 엔드포인트/키가 바뀌면 이 파일을 함께 수정하고 시리얼 로그로 반드시 검증해야 합니다.
 class APIClient {
 private:
   WiFiClient client;

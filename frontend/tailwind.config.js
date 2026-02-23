@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+// 유지보수 메모:
+// content glob 패턴에 모든 활성 UI 경로(Next 페이지/컴포넌트)가 포함되어야 합니다.
 module.exports = {
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',

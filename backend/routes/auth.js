@@ -5,6 +5,9 @@ const User = require('../models/User');
 const { registerValidation, loginValidation, validate } = require('../utils/validation');
 const auth = require('../middleware/auth');
 
+// 유지보수 메모:
+// JWT 페이로드 스키마와 만료 정책은 프론트엔드 토큰 처리와 호환되어야 합니다.
+// 응답 형태 변경 시 Next.js와 정적 HTML 클라이언트 둘 다 손상될 수 있습니다.
 const router = express.Router();
 
 // @route   POST /api/auth/register

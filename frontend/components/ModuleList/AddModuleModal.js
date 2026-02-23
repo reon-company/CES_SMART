@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+// 유지보수 메모:
+// 추가 모달 유효성 검사 규칙은 백엔드 moduleValidation 규칙과 일치해야 합니다.
 export default function AddModuleModal({ onClose, onAdd }) {
   const [formData, setFormData] = useState({
     name: '',

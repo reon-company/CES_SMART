@@ -1,5 +1,8 @@
 const pool = require('../config/database');
 
+// 유지보수 메모:
+// SensorData는 릴레이 상태에 대해 혼합 펌웨어 페이로드 타입(string/number/bool)을 허용합니다.
+// 하위 호환성을 위해 여기서의 정규화는 의도적으로 방어적입니다.
 class SensorData {
   static async create(moduleId, data) {
     // Convert relay to proper boolean value (handle both boolean and string)

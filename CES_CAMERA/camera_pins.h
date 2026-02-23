@@ -1,4 +1,6 @@
 
+// 유지보수 메모:
+// 핀맵은 하드웨어 프로파일 의존 항목이므로, 보드 모델 변경 시에만 수정해야 합니다.
 #if defined(CAMERA_MODEL_WROVER_KIT)
 #define PWDN_GPIO_NUM  -1
 #define RESET_GPIO_NUM -1

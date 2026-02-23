@@ -4,6 +4,9 @@ const Module = require('../models/Module');
 const auth = require('../middleware/auth');
 const { thresholdValidation, validate } = require('../utils/validation');
 
+// 유지보수 메모:
+// 임계값 설정은 모듈 소유권에 민감합니다. 여기서의 auth/소유권 변경은
+// 현장 운영의 자동 제어 안전 가정에 직접 영향을 줍니다.
 const router = express.Router();
 
 // @route   GET /api/config/thresholds/:moduleId

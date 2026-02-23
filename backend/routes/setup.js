@@ -2,6 +2,9 @@ const express = require('express');
 const path = require('path');
 const { execFile } = require('child_process');
 
+// 유지보수 메모:
+// setup 엔드포인트는 설치 프로그램 제공 및 서버 측 검증 자동화를 위해 존재합니다.
+// setup UI가 이 페이로드를 직접 사용하므로 응답 스키마를 안정적으로 유지하세요.
 const router = express.Router();
 
 const INSTALLER_FILE = 'CES_SMART_Installer.exe';

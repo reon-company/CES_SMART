@@ -1,5 +1,8 @@
 const pool = require('../config/database');
 
+// 유지보수 메모:
+// User 모델은 비밀번호 해시 유출을 방지하기 위해 findById에서 제한된 필드만 노출합니다.
+// 필드 선택이 변경되면 auth 미들웨어와 프론트엔드 프로필 페이로드가 영향을 받습니다.
 class User {
   static async findByEmail(email) {
     const [rows] = await pool.execute(

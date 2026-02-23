@@ -1,6 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+// 유지보수 메모:
+// 이 상수들은 배포 환경 의존 값이므로 인수인계 시점에 반드시 재검증해야 합니다.
+// MODULE_ID는 데이터/제어 바인딩을 위해 backend modules.module_id와 일치해야 합니다.
 // WiFi Configuration
 // 하드코딩 대신 WiFi AP 모드로 웹 설정 페이지 사용
 // 첫 부팅 시 "CES_SmartFarm_Setup" WiFi에 연결하여 설정

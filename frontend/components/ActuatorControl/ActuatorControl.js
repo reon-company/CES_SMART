@@ -1,6 +1,8 @@
 import { useActuatorControl } from '../../hooks/useActuatorControl';
 import ActuatorSwitch from './ActuatorSwitch';
 
+// 유지보수 메모:
+// 라벨 맵은 상태/제어 페이로드에 사용되는 백엔드 액추에이터 필드명과 일치해야 합니다.
 const actuatorLabels = {
   water_pump: { label: '워터 펌프', icon: '🚿', description: '수조에 물을 공급합니다' },
   air_pump: { label: '에어 펌프', icon: '💨', description: '용존산소(DO) 수준을 높입니다' },

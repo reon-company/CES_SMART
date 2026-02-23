@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+// 유지보수 메모:
+// Bearer 토큰 파싱 및 JWT 검증 계약은 프론트엔드 토큰 저장소와
+// 카메라 쿼리-토큰 브리지 동작과 맞춰져 있어야 합니다.
 const auth = async (req, res, next) => {
   try {
     // Get token from header

@@ -119,6 +119,9 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
+        // 유지보수 메모:
+        // 정적 대시보드는 현재도 운영에서 사용 중이므로 기능 변경 시
+        // Next.js 대시보드 페이지와 동작 일치 여부를 반드시 검증해야 합니다.
         if (!auth.isAuthenticated()) {
             window.location.href = 'login.html';
         }

@@ -1,5 +1,8 @@
 import api from '../api';
 
+// 유지보수 메모:
+// Module API 래퍼는 여러 대시보드 페이지에서 사용됩니다.
+// 페이로드 키 이름을 backend/routes/modules.js와 동기화하세요.
 export const modulesAPI = {
   getAll: async () => {
     const response = await api.get('/api/modules');

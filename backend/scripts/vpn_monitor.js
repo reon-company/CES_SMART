@@ -3,6 +3,9 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
+// 유지보수 메모:
+// 이 모니터는 원격 카메라 접근을 위한 운영 연결부입니다.
+// TARGET_IP는 프로덕션에서 사용하는 카메라 네트워크 대상 경로와 일치해야 합니다.
 const VPN_INTERFACE = 'wg0';
 const CHECK_INTERVAL = 60000; // 60초
 const TARGET_IP = '192.168.1.13'; // ESP32-CAM IP (설정에 따라 변경)

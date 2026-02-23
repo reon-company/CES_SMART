@@ -1,6 +1,9 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
+// 유지보수 메모:
+// 풀 크기 및 타임아웃 값은 제한된 Lightsail 인스턴스에 맞게 조정되었습니다.
+// 용량 검사 없이 제한을 늘리면 메모리 부족 문제가 재발할 수 있습니다.
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT || 3306,

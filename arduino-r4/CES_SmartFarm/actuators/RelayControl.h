@@ -3,6 +3,9 @@
 
 #include "config.h"
 
+// 유지보수 메모:
+// 릴레이 극성(HIGH/LOW => ON/OFF)은 하드웨어 모듈에 따라 다릅니다.
+// 배포 전 실제 릴레이 보드로 검증하세요.
 class RelayControl {
 private:
   int pin;

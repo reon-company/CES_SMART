@@ -76,6 +76,8 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
+        // 유지보수 메모:
+        // 정적 로그인 흐름은 Next.js 로그인 동작(토큰 저장 및 리다이렉트)과 일치해야 합니다.
         // 이미 로그인된 경우 대시보드로 리다이렉트
         if (auth.isAuthenticated()) {
             window.location.href = 'dashboard.html';

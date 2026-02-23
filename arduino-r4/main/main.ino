@@ -1,4 +1,7 @@
 // CES SmartFarm - Arduino R4 Main Control Loop
+// 유지보수 메모:
+// 이 파일은 레거시 풀센서 제어 펌웨어 변형입니다.
+// 필드에 배포할 때 CES_SmartFarm.ino 테스트 변형과 분리하여 유지하세요.
 #include "config.h"
 #include "api_client.h"
 

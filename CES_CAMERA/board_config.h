@@ -1,6 +1,9 @@
 #ifndef BOARD_CONFIG_H
 #define BOARD_CONFIG_H
 
+// 유지보수 메모:
+// 카메라 모델 선택은 실제 보드와 반드시 일치해야 합니다.
+// 잘못 선택하면 부팅 실패 또는 프레임 캡처 불안정이 발생할 수 있습니다.
 //
 // WARNING!!! PSRAM IC required for UXGA resolution and high JPEG quality
 //            Ensure ESP32 Wrover Module or other board with PSRAM is selected

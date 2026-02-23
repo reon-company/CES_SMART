@@ -1,5 +1,8 @@
 const pool = require('../config/database');
 
+// 유지보수 메모:
+// ActuatorStatus는 아두이노 폴링과 대시보드 제어 모두에서 사용하는 공유 상태입니다.
+// 현장 디바이스의 정의되지 않은 액추에이터 동작을 피하려면 기본/폴백 값을 안정적으로 유지하세요.
 class ActuatorStatus {
   static async findByModuleId(moduleId) {
     const [rows] = await pool.execute(

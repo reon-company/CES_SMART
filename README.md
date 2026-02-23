@@ -2,6 +2,20 @@
 
 기반 수조 관리 시스템입니다. 5개의 센서를 통해 실시간으로 수조 상태를 모니터링하고, 릴레이를 통해 액추에이터를 자동 제어합니다.
 
+## 납품/이관 문서
+
+- 통합 가이드: `CES_DELIVERY_GUIDE_KO.md`
+- 영역별 상세:
+  - `docs/handover/backend_handover_ko.md`
+  - `docs/handover/frontend_handover_ko.md`
+  - `docs/handover/arduino_handover_ko.md`
+  - `docs/handover/esp32_camera_handover_ko.md`
+- 체크리스트:
+  - `docs/handover/development_transfer_checklist_ko.md`
+  - `docs/handover/server_transfer_checklist_ko.md`
+- 주석 규약:
+  - `docs/handover/commenting_convention_ko.md`
+
 ## 시스템 아키텍처
 
 ```

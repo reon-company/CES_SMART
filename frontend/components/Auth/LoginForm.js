@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import { authAPI } from '../../lib/api/auth';
 import { setToken } from '../../lib/auth';
 
+// 유지보수 메모:
+// 로그인 성공 경로는 라우트 전환 전에 토큰이 저장된다고 가정합니다.
 export default function LoginForm() {
   const router = useRouter();
   const [formData, setFormData] = useState({

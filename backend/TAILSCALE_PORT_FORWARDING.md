@@ -25,6 +25,33 @@ New-NetFirewallRule -DisplayName "ESP32-CAM Proxy" -Direction Inbound -LocalPort
 netsh interface portproxy show all
 ```
 
+#### ESP32-CAM IP 자동 감지 + portproxy 자동 재설정 (권장)
+
+ESP32-CAM 로컬 IP가 바뀔 수 있다면, 아래 스크립트를 사용해 자동으로 규칙을 갱신할 수 있습니다.
+
+파일: `backend/TAILSCALE_AUTO_PORTPROXY.ps1`
+
+```powershell
+# 관리자 PowerShell에서 1회 실행 (현재 IP로 즉시 정합)
+powershell -ExecutionPolicy Bypass -File .\backend\TAILSCALE_AUTO_PORTPROXY.ps1 -CameraSource 192.168.1.13
+
+# 호스트명 기반(예: 공유기 DHCP 이름)으로 실행 가능
+powershell -ExecutionPolicy Bypass -File .\backend\TAILSCALE_AUTO_PORTPROXY.ps1 -CameraSource esp32cam.local
+
+# 상시 감시 모드 (30초마다 IP 재해석 후 변경 시 규칙 갱신)
+powershell -ExecutionPolicy Bypass -File .\backend\TAILSCALE_AUTO_PORTPROXY.ps1 -CameraSource esp32cam.local -Continuous -CheckIntervalSec 30
+```
+
+동작 요약:
+- `CameraSource`가 IP면 그대로 사용
+- `CameraSource`가 호스트명이면 DNS/ping으로 IPv4를 해석
+- 현재 `portproxy` 대상 IP와 비교 후 변경된 경우만 재설정
+- 방화벽 인바운드 허용 규칙도 자동 생성
+
+참고:
+- 반드시 **관리자 권한 PowerShell**에서 실행
+- `esp32cam.local` 같은 mDNS 이름이 환경에서 해석되지 않으면, DHCP 예약 + 고정 IP를 권장
+
 #### 포트 포워딩 제거 (필요시)
 
 ```powershell

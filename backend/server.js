@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -93,6 +94,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use('/downloads', express.static(path.join(__dirname, 'public', 'downloads')));
 
 // Routes
 app.get('/api/health', (req, res) => {
@@ -136,6 +138,7 @@ app.use('/api/sensors', require('./routes/sensors'));
 app.use('/api/actuators', require('./routes/actuators'));
 app.use('/api/config', require('./routes/config'));
 app.use('/api/camera', require('./routes/camera'));
+app.use('/api/setup', require('./routes/setup'));
 
 // 404 handler (must be after all routes)
 app.use((req, res) => {

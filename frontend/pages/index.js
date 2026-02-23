@@ -26,6 +26,12 @@ export default function Home() {
             </div>
             <nav className="flex items-center space-x-4">
               <a 
+                href="/setup" 
+                className="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition"
+              >
+                설치 가이드
+              </a>
+              <a 
                 href="/login" 
                 className="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition"
               >
@@ -51,6 +57,12 @@ export default function Home() {
             릴레이를 통해 액추에이터를 자동 제어하는 지능형 관리 시스템입니다.
           </p>
           <div className="flex justify-center space-x-4">
+            <a 
+              href="/setup" 
+              className="px-8 py-3 bg-yellow-300 text-gray-900 rounded-lg font-semibold hover:bg-yellow-200 transition shadow-lg"
+            >
+              설치 및 셋업
+            </a>
             <a 
               href="/register" 
               className="px-8 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition shadow-lg"

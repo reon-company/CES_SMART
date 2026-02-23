@@ -55,6 +55,7 @@
                     <button id="arduinoConnectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded">연결</button>
                     <button id="arduinoDisconnectBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded">해제</button>
                     <button id="arduinoClearBtn" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded">로그 지우기</button>
+                    <button id="arduinoDownloadBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded">.txt 다운로드</button>
                 </div>
                 <p id="arduinoStatus" class="text-xs text-gray-500 mb-2">대기 중</p>
                 <textarea id="arduinoLog" class="log-area w-full h-72 border rounded p-2 text-xs bg-black text-green-200" readonly></textarea>
@@ -77,6 +78,7 @@
                     <button id="espConnectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded">연결</button>
                     <button id="espDisconnectBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded">해제</button>
                     <button id="espClearBtn" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded">로그 지우기</button>
+                    <button id="espDownloadBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded">.txt 다운로드</button>
                 </div>
                 <p id="espStatus" class="text-xs text-gray-500 mb-2">대기 중</p>
                 <textarea id="espLog" class="log-area w-full h-72 border rounded p-2 text-xs bg-black text-green-200" readonly></textarea>
@@ -146,6 +148,29 @@
                 state.logEl.value += '\n';
             }
             state.logEl.scrollTop = state.logEl.scrollHeight;
+        }
+
+        function downloadLog(state) {
+            if (!state.logEl) return;
+            const raw = state.logEl.value || '';
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mi = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            const filename = `${state.key}-serial-log-${yyyy}${mm}${dd}-${hh}${mi}${ss}.txt`;
+            const header = `CES SMART SERIAL LOG\nDevice: ${state.name}\nSaved: ${now.toISOString()}\n\n`;
+            const blob = new Blob([header + raw], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
         }
 
         async function disconnect(state, silent = false) {
@@ -239,6 +264,10 @@
                 state.logEl.value = '';
             });
 
+            document.getElementById(options.downloadBtnId).addEventListener('click', () => {
+                downloadLog(state);
+            });
+
             document.getElementById(options.sendFormId).addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const input = document.getElementById(options.commandId);
@@ -261,6 +290,7 @@
             connectBtnId: 'arduinoConnectBtn',
             disconnectBtnId: 'arduinoDisconnectBtn',
             clearBtnId: 'arduinoClearBtn',
+            downloadBtnId: 'arduinoDownloadBtn',
             sendFormId: 'arduinoSendForm',
             commandId: 'arduinoCommand',
         });
@@ -272,6 +302,7 @@
             connectBtnId: 'espConnectBtn',
             disconnectBtnId: 'espDisconnectBtn',
             clearBtnId: 'espClearBtn',
+            downloadBtnId: 'espDownloadBtn',
             sendFormId: 'espSendForm',
             commandId: 'espCommand',
         });

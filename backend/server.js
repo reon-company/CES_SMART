@@ -63,16 +63,32 @@ const defaultCorsOrigins = [
   'http://localhost:5500',
   'http://127.0.0.1:3001',
   'http://127.0.0.1:5500',
+  'https://ces-smart.vercel.app',
+  'https://ces-smart.reonaicoffee.com',
+  'http://43.201.148.223:3000',
 ];
-const corsOrigins = process.env.CORS_ORIGIN
-  ? [
-      ...defaultCorsOrigins,
-      ...process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean),
-    ]
-  : defaultCorsOrigins;
+const corsOrigins = Array.from(new Set(
+  process.env.CORS_ORIGIN
+    ? [
+        ...defaultCorsOrigins,
+        ...process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean),
+      ]
+    : defaultCorsOrigins
+));
 
 app.use(cors({
-  origin: corsOrigins,
+  origin: (origin, callback) => {
+    // 서버-서버 요청(curl, health-check 등)은 Origin이 없을 수 있으므로 허용
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (corsOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

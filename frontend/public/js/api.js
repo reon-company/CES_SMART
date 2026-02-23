@@ -1,15 +1,21 @@
 // API 기본 설정
-// 로컬에서 열어도 배포된 백엔드(43.201.148.223) 사용
-// 로컬 백엔드 사용 시: 아래를 'http://localhost:3000'으로 변경
+// 우선순위:
+// 1) window.CES_API_BASE_URL (명시적 설정)
+// 2) 운영 API 호스트
+// 3) localhost 개발 fallback
 const getApiBaseUrl = () => {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-    if (isLocal) {
-        return 'http://43.201.148.223:3000';
+    const explicitBaseUrl = (window.CES_API_BASE_URL || '').trim();
+    if (explicitBaseUrl) {
+        return explicitBaseUrl;
     }
 
-    // 프로덕션: HTTPS 또는 배포 서버
-    return 'https://CES-smart.reonaicoffee.com';
+    const hostname = (window.location.hostname || '').toLowerCase();
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (isLocal) {
+        return 'http://localhost:3000';
+    }
+
+    return 'https://ces-smart.reonaicoffee.com';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -57,6 +63,16 @@ async function apiRequest(endpoint, options = {}) {
     } catch (error) {
         console.error('API Error:', error);
 
+        // 401 처리: 인증 만료/무효 시 토큰 제거 후 로그인 페이지로
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('token');
+            const path = (window.location.pathname || '').toLowerCase();
+            if (path.indexOf('login') === -1 && path.indexOf('register') === -1) {
+                window.location.href = window.location.origin + '/login.html';
+                return;
+            }
+        }
+
         // 네트워크 오류 처리
         if (error instanceof TypeError && (
             error.message.includes('fetch') || 
@@ -69,7 +85,7 @@ async function apiRequest(endpoint, options = {}) {
                     response: {
                         status: 0,
                         data: { 
-                            message: 'SSL 인증서 오류: 브라우저에서 "고급" → "CES-smart.reonaicoffee.com(으)로 이동"을 클릭하여 인증서를 허용해주세요.',
+                            message: 'SSL 인증서 오류: 브라우저에서 "고급" → "ces-smart.reonaicoffee.com(으)로 이동"을 클릭하여 인증서를 허용해주세요.',
                             sslError: true
                         }
                     }

@@ -1,7 +1,23 @@
 import axios from 'axios';
 
+const getApiBaseUrl = () => {
+  const explicitBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').trim();
+  if (explicitBaseUrl) {
+    return explicitBaseUrl;
+  }
+
+  if (typeof window !== 'undefined') {
+    const hostname = (window.location.hostname || '').toLowerCase();
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:3000';
+    }
+  }
+
+  return 'https://ces-smart.reonaicoffee.com';
+};
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://CES-smart.reonaicoffee.com',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },

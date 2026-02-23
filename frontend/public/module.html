@@ -78,12 +78,12 @@
                             형식: <code class="bg-gray-200 px-2 py-1 rounded">http://&lt;ESP32-CAM IP&gt;:81/stream</code>
                         </p>
                         <p class="text-gray-400 text-xs mt-2">
-                            예: <code class="bg-gray-200 px-2 py-1 rounded">http://192.168.1.13:81/stream</code>
+                            예: <code class="bg-gray-200 px-2 py-1 rounded">http://100.69.169.126:81/stream</code> (Tailscale) 또는 <code class="bg-gray-200 px-2 py-1 rounded">http://192.168.1.13:81/stream</code>
                         </p>
                     </div>
                     <p id="cameraError" class="text-gray-500 p-4 text-center" style="display: none;">
                         카메라에 연결할 수 없습니다.<br>
-                        ESP32-CAM이 같은 네트워크에 있는지, 스트림 URL이 맞는지 확인해주세요.
+                        서버(프록시)에서 ESP32-CAM 주소로 접근 가능한지(Tailscale/VPN/포트포워딩), 스트림 URL이 맞는지 확인해주세요.
                     </p>
                 </div>
                 <div id="cameraUrlInfo" class="mt-4 flex items-center justify-between" style="display: none;">
@@ -379,7 +379,8 @@
             }
         }
 
-        // 카메라 스트림 URL을 프록시 URL로 변환 (로컬 IP인 경우)
+        // 카메라 스트림 URL을 서버 프록시 URL로 변환
+        // 외부 네트워크 사용자도 같은 방식으로 보기 위해 항상 서버를 경유한다.
         function getProxyStreamUrl(streamUrl, moduleId) {
             if (!streamUrl || !moduleId) {
                 return streamUrl;
@@ -387,21 +388,17 @@
 
             try {
                 const url = new URL(streamUrl);
-                const hostname = url.hostname;
-                
-                // 로컬 IP 주소 체크 (192.168.x.x, 10.x.x.x, 172.16-31.x.x, 127.x.x.x)
-                const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.)/.test(hostname);
-                
-                if (isLocalIP) {
-                    // 서버 프록시 URL로 변환 (토큰을 쿼리 파라미터로 추가 - img 태그용)
-                    const token = localStorage.getItem('token');
-                    const proxyUrl = `${API_BASE_URL}/api/camera/${moduleId}/stream${token ? '?token=' + encodeURIComponent(token) : ''}`;
-                    console.log('Converting local IP to proxy URL:', streamUrl, '->', proxyUrl);
-                    return proxyUrl;
+
+                // 이미 서버 프록시 URL이면 그대로 사용
+                if (url.pathname.includes('/api/camera/')) {
+                    return streamUrl;
                 }
-                
-                // 이미 외부 URL이거나 서버 URL인 경우 그대로 사용
-                return streamUrl;
+
+                // 서버 프록시 URL로 변환 (img 태그용 토큰 쿼리 포함)
+                const token = localStorage.getItem('token');
+                const proxyUrl = `${API_BASE_URL}/api/camera/${moduleId}/stream${token ? '?token=' + encodeURIComponent(token) : ''}`;
+                console.log('Converting stream URL to proxy URL:', streamUrl, '->', proxyUrl);
+                return proxyUrl;
             } catch (e) {
                 console.error('Invalid stream URL:', streamUrl, e);
                 return streamUrl;
@@ -415,8 +412,8 @@
             }
             
             // module_id를 사용하여 프록시 URL로 변환
-            const moduleModuleId = window.moduleModuleId || moduleModuleId;
-            const finalStreamUrl = getProxyStreamUrl(streamUrl, moduleModuleId);
+            const currentModuleId = window.moduleModuleId || moduleModuleId;
+            const finalStreamUrl = getProxyStreamUrl(streamUrl, currentModuleId);
             
             console.log('loadCameraStream: Loading stream from', finalStreamUrl, '(original:', streamUrl, ')');
             

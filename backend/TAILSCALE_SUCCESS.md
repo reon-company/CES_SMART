@@ -8,7 +8,7 @@
 
 - **서버 Tailscale IP**: `100.81.196.64`
 - **ESP32-CAM 네트워크 컴퓨터 Tailscale IP**: `100.69.169.126`
-- **ESP32-CAM 로컬 IP**: `192.168.1.3`
+- **ESP32-CAM 로컬 IP**: `192.168.1.13`
 - **스트림 URL**: `http://100.69.169.126:81/stream`
 
 ### 테스트 결과
@@ -83,7 +83,7 @@ Windows에서 포트 포워딩을 다시 설정:
 
 ```powershell
 # PowerShell 관리자 권한으로 실행
-netsh interface portproxy add v4tov4 listenport=81 listenaddress=0.0.0.0 connectport=81 connectaddress=192.168.1.3
+netsh interface portproxy add v4tov4 listenport=81 listenaddress=0.0.0.0 connectport=81 connectaddress=192.168.1.13
 ```
 
 ## 📚 참고 문서

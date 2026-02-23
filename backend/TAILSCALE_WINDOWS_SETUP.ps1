@@ -1,7 +1,8 @@
 # ESP32-CAM 포트 포워딩 설정 스크립트 (Windows PowerShell 관리자 권한)
 
 # ESP32-CAM 로컬 IP
-$ESP32CAM_IP = "192.168.1.3"
+$ESP32CAM_IP = "192.168.1.13"
+$TAILSCALE_IP = "100.69.169.126"
 $PORT = 81
 
 Write-Host "==========================================" -ForegroundColor Cyan
@@ -12,6 +13,7 @@ Write-Host ""
 # 기존 포트 포워딩 제거 (있으면)
 Write-Host "기존 포트 포워딩 제거 중..." -ForegroundColor Yellow
 netsh interface portproxy delete v4tov4 listenport=$PORT listenaddress=0.0.0.0 2>$null
+netsh interface portproxy delete v4tov4 listenport=$PORT listenaddress=$TAILSCALE_IP 2>$null
 
 # 포트 포워딩 추가
 Write-Host "포트 포워딩 추가 중..." -ForegroundColor Yellow
@@ -50,8 +52,8 @@ netsh interface portproxy show all
 Write-Host ""
 Write-Host "ESP32-CAM 접속 URL:" -ForegroundColor Yellow
 Write-Host "  로컬: http://localhost:$PORT/stream" -ForegroundColor White
-Write-Host "  Tailscale: http://100.69.169.126:$PORT/stream" -ForegroundColor White
+Write-Host "  Tailscale: http://$TAILSCALE_IP:$PORT/stream" -ForegroundColor White
 Write-Host ""
 Write-Host "서버에서 테스트:" -ForegroundColor Yellow
-Write-Host "  curl http://100.69.169.126:$PORT/stream" -ForegroundColor White
+Write-Host "  curl http://$TAILSCALE_IP:$PORT/stream" -ForegroundColor White
 Write-Host ""

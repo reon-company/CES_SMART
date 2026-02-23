@@ -18,7 +18,8 @@ export default function ModuleDetailPage() {
   const [updateError, setUpdateError] = useState('');
   const cameraImgRef = useRef(null);
 
-  // 카메라 스트림 URL을 프록시 URL로 변환 (로컬 IP인 경우)
+  // 카메라 스트림 URL을 서버 프록시 URL로 변환
+  // 외부 네트워크 사용자도 동일하게 보기 위해 항상 서버를 경유한다.
   const getProxyStreamUrl = (streamUrl, moduleId) => {
     if (!streamUrl || !moduleId) {
       return streamUrl;
@@ -26,25 +27,33 @@ export default function ModuleDetailPage() {
 
     try {
       const url = new URL(streamUrl);
-      const hostname = url.hostname;
-      
-      // 로컬 IP 주소 체크 (192.168.x.x, 10.x.x.x, 172.16-31.x.x, 127.x.x.x)
-      const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.)/.test(hostname);
-      
-      if (isLocalIP) {
-        // 서버 프록시 URL로 변환 (토큰을 쿼리 파라미터로 추가 - img 태그용)
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://CES-smart.reonaicoffee.com';
-        let token = null;
-        if (typeof window !== 'undefined') {
-          token = localStorage.getItem('token');
-        }
-        const proxyUrl = `${apiBaseUrl}/api/camera/${moduleId}/stream${token ? '?token=' + encodeURIComponent(token) : ''}`;
-        console.log('Converting local IP to proxy URL:', streamUrl, '->', proxyUrl);
-        return proxyUrl;
+
+      // 이미 서버 프록시 URL이면 그대로 사용
+      if (url.pathname.includes('/api/camera/')) {
+        return streamUrl;
       }
-      
-      // 이미 외부 URL이거나 서버 URL인 경우 그대로 사용
-      return streamUrl;
+
+      const apiBaseUrl = (() => {
+        const explicit = (process.env.NEXT_PUBLIC_API_BASE_URL || '').trim();
+        if (explicit) return explicit;
+
+        if (typeof window !== 'undefined') {
+          const hostname = (window.location.hostname || '').toLowerCase();
+          if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return 'http://localhost:3000';
+          }
+        }
+
+        return 'https://ces-smart.reonaicoffee.com';
+      })();
+
+      let token = null;
+      if (typeof window !== 'undefined') {
+        token = localStorage.getItem('token');
+      }
+      const proxyUrl = `${apiBaseUrl}/api/camera/${moduleId}/stream${token ? '?token=' + encodeURIComponent(token) : ''}`;
+      console.log('Converting stream URL to proxy URL:', streamUrl, '->', proxyUrl);
+      return proxyUrl;
     } catch (e) {
       console.error('Invalid stream URL:', streamUrl, e);
       return streamUrl;
@@ -218,7 +227,7 @@ export default function ModuleDetailPage() {
                   형식: <code className="bg-gray-200 px-2 py-1 rounded">http://&lt;ESP32-CAM IP&gt;:81/stream</code>
                 </p>
                 <p className="text-gray-400 text-xs mt-2">
-                  예: <code className="bg-gray-200 px-2 py-1 rounded">http://192.168.1.13:81/stream</code>
+                  예: <code className="bg-gray-200 px-2 py-1 rounded">http://100.69.169.126:81/stream</code> (Tailscale) 또는 <code className="bg-gray-200 px-2 py-1 rounded">http://192.168.1.13:81/stream</code>
                 </p>
               </div>
             ) : cameraError ? (
@@ -226,9 +235,9 @@ export default function ModuleDetailPage() {
                 <div className="text-6xl mb-4">❌</div>
                 <p className="text-gray-700 font-semibold mb-2">카메라에 연결할 수 없습니다</p>
                 <div className="text-gray-600 text-sm mb-4 space-y-2">
-                  <p>서버가 ESP32-CAM의 로컬 네트워크에 접근할 수 없습니다.</p>
+                  <p>서버 프록시가 ESP32-CAM 주소에 접근할 수 없습니다.</p>
                   <p className="text-xs text-gray-500 mt-2">
-                    <strong>원인:</strong> 서버(43.201.148.223)와 ESP32-CAM(192.168.1.x)이 서로 다른 네트워크에 있습니다.
+                    <strong>원인:</strong> 서버와 ESP32-CAM 사이의 Tailscale/VPN/포트포워딩 경로가 끊겼을 수 있습니다.
                   </p>
                   <p className="text-xs text-gray-500">
                     <strong>해결 방법:</strong>

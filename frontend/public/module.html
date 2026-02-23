@@ -337,8 +337,9 @@
                     
                     // 카메라 컨테이너 크기 설정
                     if (cameraContainer) {
-                        cameraContainer.className = 'rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100 aspect-video max-w-6xl mx-auto flex items-center justify-center';
-                        cameraContainer.style.minHeight = '400px';
+                        const isMobile = window.innerWidth < 768;
+                        cameraContainer.className = 'w-full rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100 aspect-video max-w-6xl mx-auto flex items-center justify-center';
+                        cameraContainer.style.minHeight = isMobile ? '220px' : '400px';
                     }
                     
                     // 카메라 스트림 로드 (약간의 지연을 두어 DOM이 완전히 업데이트된 후 실행)
@@ -359,8 +360,9 @@
                     
                     // 컨테이너 크기 조정
                     if (cameraContainer) {
-                        cameraContainer.className = 'rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 flex items-center justify-center';
-                        cameraContainer.style.minHeight = '300px';
+                        const isMobile = window.innerWidth < 768;
+                        cameraContainer.className = 'w-full rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 flex items-center justify-center';
+                        cameraContainer.style.minHeight = isMobile ? '220px' : '300px';
                     }
                 }
                 
@@ -448,7 +450,7 @@
             const newImg = document.createElement('img');
             newImg.id = 'cameraStream';
             newImg.alt = '실시간 카메라 영상';
-            newImg.className = 'w-full h-full object-contain';
+            newImg.className = 'block w-full h-full max-w-full max-h-full object-contain';
             newImg.style.display = 'none';
             newImg.crossOrigin = 'anonymous';
             

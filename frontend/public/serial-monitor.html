@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시리얼 모니터 - CES 스마트팜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        * { font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .log-area { font-family: Consolas, 'Courier New', monospace; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <a href="dashboard.html" class="text-2xl hover:text-gray-200">←</a>
+                    <div>
+                        <h1 class="text-2xl font-bold">웹 시리얼 모니터</h1>
+                        <p class="text-sm text-indigo-100">Arduino / ESP32-CAM 로컬 시리얼 로그 확인</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span id="secureStatus" class="text-xs bg-white bg-opacity-20 px-3 py-1 rounded-full">환경 확인 중...</span>
+                    <button onclick="auth.logout()" class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">로그아웃</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 space-y-6">
+        <div id="globalNotice" class="hidden rounded-lg border px-4 py-3 text-sm"></div>
+
+        <section class="bg-white rounded-xl p-5 shadow border">
+            <h2 class="text-lg font-semibold mb-2">사용 안내</h2>
+            <ul class="text-sm text-gray-700 space-y-1 list-disc ml-5">
+                <li>Chrome/Edge 데스크톱에서 동작합니다.</li>
+                <li>HTTPS 또는 localhost 환경에서만 Web Serial API를 사용할 수 있습니다.</li>
+                <li>연결 버튼 클릭 후 OS 포트 선택창에서 장치를 선택하세요.</li>
+            </ul>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl p-5 shadow border">
+                <h3 class="text-xl font-bold mb-4">Arduino 시리얼</h3>
+                <div class="flex flex-wrap gap-2 items-center mb-3">
+                    <label class="text-sm font-medium text-gray-700">Baud</label>
+                    <select id="arduinoBaud" class="border rounded px-2 py-1">
+                        <option>9600</option>
+                        <option selected>115200</option>
+                        <option>230400</option>
+                    </select>
+                    <button id="arduinoConnectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded">연결</button>
+                    <button id="arduinoDisconnectBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded">해제</button>
+                    <button id="arduinoClearBtn" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded">로그 지우기</button>
+                </div>
+                <p id="arduinoStatus" class="text-xs text-gray-500 mb-2">대기 중</p>
+                <textarea id="arduinoLog" class="log-area w-full h-72 border rounded p-2 text-xs bg-black text-green-200" readonly></textarea>
+                <form id="arduinoSendForm" class="mt-3 flex gap-2">
+                    <input id="arduinoCommand" type="text" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="명령 입력 (예: HELP)" />
+                    <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded text-sm">전송</button>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-xl p-5 shadow border">
+                <h3 class="text-xl font-bold mb-4">ESP32-CAM 시리얼</h3>
+                <div class="flex flex-wrap gap-2 items-center mb-3">
+                    <label class="text-sm font-medium text-gray-700">Baud</label>
+                    <select id="espBaud" class="border rounded px-2 py-1">
+                        <option>9600</option>
+                        <option>57600</option>
+                        <option selected>115200</option>
+                        <option>230400</option>
+                    </select>
+                    <button id="espConnectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded">연결</button>
+                    <button id="espDisconnectBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded">해제</button>
+                    <button id="espClearBtn" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded">로그 지우기</button>
+                </div>
+                <p id="espStatus" class="text-xs text-gray-500 mb-2">대기 중</p>
+                <textarea id="espLog" class="log-area w-full h-72 border rounded p-2 text-xs bg-black text-green-200" readonly></textarea>
+                <form id="espSendForm" class="mt-3 flex gap-2">
+                    <input id="espCommand" type="text" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="명령 입력 (예: SHOW_WIFI)" />
+                    <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded text-sm">전송</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        if (!auth.isAuthenticated()) {
+            window.location.href = 'login.html';
+        }
+
+        const isSecureContextAllowed = window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const hasWebSerial = typeof navigator !== 'undefined' && !!navigator.serial;
+
+        const states = {
+            arduino: {
+                key: 'arduino',
+                name: 'Arduino',
+                port: null,
+                reader: null,
+                writer: null,
+                keepReading: false,
+                logEl: null,
+                statusEl: null,
+            },
+            esp: {
+                key: 'esp',
+                name: 'ESP32-CAM',
+                port: null,
+                reader: null,
+                writer: null,
+                keepReading: false,
+                logEl: null,
+                statusEl: null,
+            }
+        };
+
+        function showNotice(message, tone) {
+            const el = document.getElementById('globalNotice');
+            el.classList.remove('hidden', 'bg-red-50', 'border-red-200', 'text-red-700', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+            el.textContent = message;
+            if (tone === 'error') el.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+            else el.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+        }
+
+        function setStatus(state, message, tone) {
+            if (!state.statusEl) return;
+            state.statusEl.textContent = message;
+            state.statusEl.className = tone === 'error' ? 'text-xs text-red-600 mb-2' : tone === 'ok' ? 'text-xs text-emerald-600 mb-2' : 'text-xs text-gray-500 mb-2';
+        }
+
+        function appendLog(state, text) {
+            if (!state.logEl) return;
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            state.logEl.value += `[${hh}:${mm}:${ss}] ${text}`;
+            if (!text.endsWith('\n')) {
+                state.logEl.value += '\n';
+            }
+            state.logEl.scrollTop = state.logEl.scrollHeight;
+        }
+
+        async function disconnect(state, silent = false) {
+            state.keepReading = false;
+            try { if (state.reader) await state.reader.cancel(); } catch (_) {}
+            try { if (state.reader) state.reader.releaseLock(); } catch (_) {}
+            state.reader = null;
+            try { if (state.writer) state.writer.releaseLock(); } catch (_) {}
+            state.writer = null;
+            try { if (state.port) await state.port.close(); } catch (_) {}
+            state.port = null;
+            if (!silent) {
+                setStatus(state, `${state.name} 연결 해제`, 'normal');
+                appendLog(state, '[system] disconnected');
+            }
+        }
+
+        async function readLoop(state) {
+            const decoder = new TextDecoder();
+            state.keepReading = true;
+            while (state.port && state.port.readable && state.keepReading) {
+                try {
+                    state.reader = state.port.readable.getReader();
+                    while (state.keepReading) {
+                        const { value, done } = await state.reader.read();
+                        if (done) break;
+                        if (value) appendLog(state, decoder.decode(value, { stream: true }));
+                    }
+                } catch (error) {
+                    appendLog(state, `[system] read error: ${error.message}`);
+                    break;
+                } finally {
+                    try { state.reader.releaseLock(); } catch (_) {}
+                    state.reader = null;
+                }
+            }
+            if (state.port) {
+                await disconnect(state, true);
+                setStatus(state, `${state.name} 연결 종료`, 'normal');
+            }
+        }
+
+        async function connect(state, baudRate) {
+            if (!hasWebSerial || !isSecureContextAllowed) {
+                throw new Error('Web Serial API를 사용할 수 없는 환경입니다.');
+            }
+            if (state.port) {
+                await disconnect(state, true);
+            }
+            const port = await navigator.serial.requestPort();
+            await port.open({ baudRate });
+            state.port = port;
+            setStatus(state, `${state.name} 연결됨 (${baudRate} baud)`, 'ok');
+            appendLog(state, `[system] connected (${baudRate})`);
+            readLoop(state);
+        }
+
+        async function sendCommand(state, command) {
+            if (!state.port || !state.port.writable) {
+                throw new Error('먼저 포트를 연결하세요.');
+            }
+            const writer = state.port.writable.getWriter();
+            try {
+                const payload = `${command}\n`;
+                await writer.write(new TextEncoder().encode(payload));
+                appendLog(state, `> ${command}`);
+            } finally {
+                writer.releaseLock();
+            }
+        }
+
+        function bindDevice(state, options) {
+            state.logEl = document.getElementById(options.logId);
+            state.statusEl = document.getElementById(options.statusId);
+
+            document.getElementById(options.connectBtnId).addEventListener('click', async () => {
+                try {
+                    const baudRate = Number(document.getElementById(options.baudId).value);
+                    await connect(state, baudRate);
+                } catch (error) {
+                    setStatus(state, error.message || '연결 실패', 'error');
+                    appendLog(state, `[system] connect error: ${error.message}`);
+                }
+            });
+
+            document.getElementById(options.disconnectBtnId).addEventListener('click', async () => {
+                await disconnect(state);
+            });
+
+            document.getElementById(options.clearBtnId).addEventListener('click', () => {
+                state.logEl.value = '';
+            });
+
+            document.getElementById(options.sendFormId).addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const input = document.getElementById(options.commandId);
+                const command = input.value.trim();
+                if (!command) return;
+                try {
+                    await sendCommand(state, command);
+                    input.value = '';
+                } catch (error) {
+                    setStatus(state, error.message || '전송 실패', 'error');
+                    appendLog(state, `[system] send error: ${error.message}`);
+                }
+            });
+        }
+
+        bindDevice(states.arduino, {
+            logId: 'arduinoLog',
+            statusId: 'arduinoStatus',
+            baudId: 'arduinoBaud',
+            connectBtnId: 'arduinoConnectBtn',
+            disconnectBtnId: 'arduinoDisconnectBtn',
+            clearBtnId: 'arduinoClearBtn',
+            sendFormId: 'arduinoSendForm',
+            commandId: 'arduinoCommand',
+        });
+
+        bindDevice(states.esp, {
+            logId: 'espLog',
+            statusId: 'espStatus',
+            baudId: 'espBaud',
+            connectBtnId: 'espConnectBtn',
+            disconnectBtnId: 'espDisconnectBtn',
+            clearBtnId: 'espClearBtn',
+            sendFormId: 'espSendForm',
+            commandId: 'espCommand',
+        });
+
+        const secureStatusEl = document.getElementById('secureStatus');
+        if (!isSecureContextAllowed || !hasWebSerial) {
+            secureStatusEl.textContent = 'Web Serial 사용 불가';
+            secureStatusEl.className = 'text-xs bg-red-500 bg-opacity-70 px-3 py-1 rounded-full';
+            showNotice('현재 브라우저/환경에서는 Web Serial API를 사용할 수 없습니다. Chrome/Edge + HTTPS(또는 localhost)에서 접속하세요.', 'error');
+        } else {
+            secureStatusEl.textContent = 'Web Serial 사용 가능';
+            secureStatusEl.className = 'text-xs bg-emerald-500 bg-opacity-70 px-3 py-1 rounded-full';
+            showNotice('연결 버튼을 누른 뒤 포트를 선택하면 실시간 로그를 확인할 수 있습니다.', 'ok');
+        }
+
+        if (navigator.serial && typeof navigator.serial.addEventListener === 'function') {
+            navigator.serial.addEventListener('disconnect', async (event) => {
+                const eventPort = event.target || event.port;
+                if (states.arduino.port === eventPort) {
+                    await disconnect(states.arduino, true);
+                    setStatus(states.arduino, 'Arduino 장치 분리됨', 'error');
+                }
+                if (states.esp.port === eventPort) {
+                    await disconnect(states.esp, true);
+                    setStatus(states.esp, 'ESP32-CAM 장치 분리됨', 'error');
+                }
+            });
+        }
+
+        window.addEventListener('beforeunload', async () => {
+            await disconnect(states.arduino, true);
+            await disconnect(states.esp, true);
+        });
+    </script>
+</body>
+</html>

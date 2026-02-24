@@ -1,0 +1,285 @@
+const express = require('express');
+const Module = require('../models/Module');
+const ActuatorStatus = require('../models/ActuatorStatus');
+const auth = require('../middleware/auth');
+const { moduleValidation, validate } = require('../utils/validation');
+
+// 유지보수 메모:
+// 모듈 생명주기 관리의 기준 경로는 이 라우트입니다.
+// module_id 변경은 sensor/actuator/threshold 연결에 영향을 주므로,
+// Module.updateModuleId 트랜잭션 동작과 의미를 반드시 일치시켜야 합니다.
+const router = express.Router();
+const MAX_MODULES = 30;
+
+// @route   GET /api/modules
+// @desc    Get all modules for current user
+// @access  Private
+router.get('/', auth, async (req, res) => {
+  try {
+    const modules = await Module.findByUserId(req.user.id);
+    res.json({
+      success: true,
+      count: modules.length,
+      modules
+    });
+  } catch (error) {
+    console.error('Get modules error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   GET /api/modules/:moduleId
+// @desc    Get single module by ID
+// @access  Private
+router.get('/:moduleId', auth, async (req, res) => {
+  try {
+    const module = await Module.findById(req.params.moduleId, req.user.id);
+    
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      module
+    });
+  } catch (error) {
+    console.error('Get module error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   POST /api/modules
+// @desc    Create a new module
+// @access  Private
+router.post('/', auth, moduleValidation, validate, async (req, res) => {
+  try {
+    const { name, module_id, wifi_ssid, wifi_password, camera_stream_url } = req.body;
+
+    // Check module count limit (최대 30개)
+    const moduleCount = await Module.countByUserId(req.user.id);
+    if (moduleCount >= MAX_MODULES) {
+      return res.status(400).json({
+        success: false,
+        message: `Maximum ${MAX_MODULES} modules allowed per user`
+      });
+    }
+
+    // Check if module_id already exists
+    const existingModule = await Module.findByModuleId(module_id);
+    if (existingModule) {
+      return res.status(400).json({
+        success: false,
+        message: 'Module ID already exists'
+      });
+    }
+
+    // Create module (카메라 전용 모듈은 wifi 비어 있을 수 있음)
+    const moduleId = await Module.create(
+      req.user.id,
+      name,
+      module_id,
+      wifi_ssid || null,
+      wifi_password || null,
+      camera_stream_url || null
+    );
+
+    // Initialize actuator status (all actuators OFF)
+    await ActuatorStatus.createOrUpdate(module_id, {
+      water_pump: false,
+      air_pump: false,
+      valve: false,
+      heater: false,
+      cooler: false,
+      relay: false
+    });
+
+    const module = await Module.findById(moduleId, req.user.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Module created successfully',
+      module
+    });
+  } catch (error) {
+    console.error('Create module error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   PUT /api/modules/:moduleId
+// @desc    Update module
+// @access  Private
+router.put('/:moduleId', auth, async (req, res) => {
+  try {
+    const { name, status, wifi_ssid, wifi_password, camera_stream_url, module_id } = req.body;
+
+    console.log('Update module request:', {
+      moduleId: req.params.moduleId,
+      userId: req.user.id,
+      camera_stream_url: camera_stream_url
+    });
+
+    // Check if module exists and belongs to user
+    const module = await Module.findById(req.params.moduleId, req.user.id);
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found'
+      });
+    }
+
+    // module_id 변경 처리 (선택)
+    let moduleIdChanged = false;
+    if (typeof module_id === 'string' && module_id.trim() && module_id.trim() !== module.module_id) {
+      // IMPORTANT:
+      // module_id is referenced by sensor_data/actuator_status/thresholds.
+      // Delegate to transactional model helper to keep cross-table identity consistent.
+      const renameResult = await Module.updateModuleId(req.params.moduleId, req.user.id, module_id.trim());
+      if (!renameResult.updated) {
+        if (renameResult.reason === 'DUPLICATE') {
+          return res.status(400).json({
+            success: false,
+            message: 'Module ID already exists'
+          });
+        }
+        if (renameResult.reason !== 'NO_CHANGE') {
+          return res.status(400).json({
+            success: false,
+            message: 'Module ID update failed'
+          });
+        }
+      } else {
+        moduleIdChanged = true;
+      }
+    }
+
+    // Update module (module_id 제외)
+    const updateData = {
+      name,
+      status,
+      wifi_ssid,
+      wifi_password,
+      camera_stream_url // null도 허용
+    };
+    
+    console.log('Update data:', updateData);
+    
+    const updated = await Module.update(req.params.moduleId, req.user.id, updateData);
+
+    if (!updated && !moduleIdChanged) {
+      return res.status(400).json({
+        success: false,
+        message: 'No changes made'
+      });
+    }
+
+    const updatedModule = await Module.findById(req.params.moduleId, req.user.id);
+    
+    console.log('Updated module from database:', {
+      id: updatedModule.id,
+      name: updatedModule.name,
+      camera_stream_url: updatedModule.camera_stream_url
+    });
+
+    res.json({
+      success: true,
+      message: 'Module updated successfully',
+      module: updatedModule
+    });
+  } catch (error) {
+    console.error('Update module error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   DELETE /api/modules/:moduleId
+// @desc    Delete module
+// @access  Private
+router.delete('/:moduleId', auth, async (req, res) => {
+  try {
+    // Check if module exists and belongs to user
+    const module = await Module.findById(req.params.moduleId, req.user.id);
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found'
+      });
+    }
+
+    // Delete module (cascade will handle related data)
+    const deleted = await Module.delete(req.params.moduleId, req.user.id);
+
+    if (!deleted) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to delete module'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Module deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete module error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   GET /api/modules/:moduleId/wifi-config
+// @desc    Get WiFi configuration for module (for Arduino)
+// @access  Public (Arduino needs to access this)
+router.get('/:moduleId/wifi-config', async (req, res) => {
+  try {
+    const module = await Module.findByModuleId(req.params.moduleId);
+    
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found'
+      });
+    }
+
+    if (!module.wifi_ssid || !module.wifi_password) {
+      return res.status(404).json({
+        success: false,
+        message: 'WiFi configuration not set'
+      });
+    }
+
+    // WiFi 정보 반환 (비밀번호는 평문으로 전송 - HTTPS 권장)
+    res.json({
+      success: true,
+      wifi_ssid: module.wifi_ssid,
+      wifi_password: module.wifi_password
+    });
+  } catch (error) {
+    console.error('Get WiFi config error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+module.exports = router;
+

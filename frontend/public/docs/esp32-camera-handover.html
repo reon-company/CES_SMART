@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESP32-CAMERA 핸드오버 가이드 - DOCS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* doc-common: TOC */
+    .doc-toc a.active { font-weight: 600; color: #4f46e5; }
+    .doc-toc a { color: #64748b; }
+    .doc-toc a:hover { color: #334155; }
+    .doc-toc .toc-h2 { padding-left: 0; }
+    .doc-toc .toc-h3 { padding-left: 1rem; font-size: 0.9em; }
+    .doc-content h1, .doc-content h2, .doc-content h3 { scroll-margin-top: 6rem; }
+    .doc-content .prose { max-width: none; }
+
+    /* doc-common: body gradient */
+    .doc-body-gradient {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+      min-height: 100vh;
+    }
+
+    /* doc-common: article card/glass */
+    .doc-article-card {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 4px 24px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06);
+      border: 1px solid rgba(226,232,240,0.9);
+    }
+
+    /* doc-common: headings */
+    .doc-content h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+    .doc-content h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 1.5rem;
+    }
+    .doc-content h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 1rem;
+    }
+
+    /* doc-common: section-card */
+    .section-card {
+      background: rgba(248,250,252,0.6);
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .section-card:last-child { margin-bottom: 0; }
+    .section-card > h2:first-child { margin-top: 0; }
+
+    /* doc-common: badges */
+    .doc-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0 1.25rem;
+    }
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border-radius: 9999px;
+      background: #e0e7ff;
+      color: #4338ca;
+    }
+    .doc-badge.doc-badge-guide { background: #ddd6fe; color: #5b21b6; }
+    .doc-badge.doc-badge-date { background: #e2e8f0; color: #475569; font-size: 0.7rem; }
+
+    /* doc-common: table */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      margin: 1rem 0;
+    }
+    .doc-content table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .doc-content table th {
+      background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+      font-weight: 600;
+      color: #334155;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    .doc-content table th:first-child { border-radius: 10px 0 0 0; }
+    .doc-content table th:last-child { border-radius: 0 10px 0 0; }
+    .doc-content table td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .doc-content table tr:hover td { background: #f8fafc; }
+    .doc-content table tbody tr:last-child td:first-child { border-radius: 0 0 0 10px; }
+    .doc-content table tbody tr:last-child td:last-child { border-radius: 0 0 10px 0; }
+
+    /* doc-common: code/pre */
+    .doc-content code {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 0.2em 0.45em;
+      border-radius: 6px;
+      font-size: 0.875em;
+    }
+    .doc-content pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      border: 1px solid #334155;
+    }
+    .doc-content pre code { background: none; padding: 0; }
+
+    /* doc-common: blockquote */
+    .doc-content blockquote {
+      border-left: 4px solid #6366f1;
+      background: #f8fafc;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      border-radius: 0 8px 8px 0;
+      color: #475569;
+    }
+
+    /* doc-common: checklist li */
+    .doc-content ul li:has(input[type="checkbox"]) {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+      border-radius: 6px;
+      padding-left: 0.5rem;
+    }
+    .doc-content ul li:has(input[type="checkbox"]):hover { background: rgba(241,245,249,0.8); }
+    .doc-content ul li:has(input[type="checkbox"]) input {
+      margin-top: 0.2rem;
+      accent-color: #4f46e5;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="doc-body-gradient min-h-screen">
+  <header class="sticky top-0 z-50 bg-slate-800 text-white shadow-lg">
+    <div class="container mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <a href="../index.html" class="px-3 py-1.5 bg-slate-600 rounded-lg hover:bg-slate-500 transition">홈</a>
+        <a href="../docs.html" class="px-3 py-1.5 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition font-medium">문서센터</a>
+      </div>
+      <h1 class="text-lg font-bold text-white">ESP32-CAMERA 핸드오버 가이드</h1>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <div class="mb-4">
+      <label for="inpage-search" class="block text-sm font-medium text-slate-600 mb-2">문서 내 검색</label>
+      <input type="text" id="inpage-search" placeholder="현재 문서에서 검색..." class="w-full max-w-md px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm" />
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6">
+      <aside class="lg:w-56 flex-shrink-0">
+        <div class="lg:sticky lg:top-24">
+          <button type="button" id="toc-toggle" class="lg:hidden w-full px-4 py-2 bg-white rounded-lg border border-slate-200 text-left font-medium text-slate-700">목차 펼치기/접기</button>
+          <nav id="doc-toc" class="doc-toc mt-2 hidden lg:block bg-white rounded-lg p-4 border border-slate-200 text-sm"></nav>
+        </div>
+      </aside>
+      <article class="flex-1 min-w-0 doc-article-card rounded-xl p-6 prose prose-slate max-w-none doc-content">
+        <div id="md-output"></div>
+      </article>
+    </div>
+  </main>
+  <script type="text/template" id="md-content"># ESP32-CAMERA 핸드오버 가이드
+
+---
+
+## 대상 독자 / 목표
+
+| 항목 | 내용 |
+|------|------|
+| **대상 독자** | ESP32/카메라 모듈 인수 담당자, 현장 배포·네트워크 담당자 |
+| **목표** | ESP32-CAM MJPEG 스트리밍 모듈의 빌드, 업로드, WiFi 설정, 서버 프록시 연동을 1일 내 수행 가능하도록 함 |
+
+---
+
+## 사전 준비물
+
+- [ ] Arduino IDE 2.x + ESP32 보드 패키지 (또는 PlatformIO)
+- [ ] ESP32-CAM 모듈 (보드 타입에 따라 `board_config.h`, `camera_pins.h` 확인)
+- [ ] USB-to-Serial 변환기 (대부분 ESP32-CAM에 직결 USB 없음)
+- [ ] `CES_CAMERA/config.example.h` 기반 `config.h` (또는 `camera_wifi_config.h` 편집)
+- [ ] 서버에서 카메라 IP로 접근 가능한 경로 (Tailscale/portproxy 등)
+
+---
+
+## 1. 역할
+- MJPEG 스트리밍 제공
+- WiFi 설정 저장(NVS) 및 재연결
+- 시리얼/웹(`/wifi`) 기반 설정 인터페이스 제공
+
+## 2. 핵심 파일
+- `CES_CAMERA/CES_CAMERA.ino`: 카메라 초기화, WiFi 연결, serial 명령 처리
+- `CES_CAMERA/app_httpd.cpp`: 스트림/캡처/설정 HTTP 엔드포인트
+- `CES_CAMERA/camera_wifi_config.h`: 기본 WiFi fallback
+- `CES_CAMERA/board_config.h`, `camera_pins.h`: 보드/핀 매핑
+
+## 3. 주요 엔드포인트
+- `/stream`: MJPEG 스트림
+- `/capture`: 단일 이미지
+- `/wifi`: WiFi 설정 페이지
+- `/wifi/set`: WiFi 저장/적용
+- `/wifi/clear`: 저장 설정 초기화
+
+## 4. 운영 설계 포인트
+- 외부 사용자는 ESP32 직접 접속 대신 서버 카메라 프록시 API 사용
+- 서버가 ESP32에 닿지 못하면 프록시 502/504가 발생
+- Tailscale/포트포워딩 경로가 끊기면 프론트 카메라 표시 실패
+
+## 5. 이관 체크포인트
+- 카메라 보드 타입/핀 정의 일치 확인
+- 시리얼에서 연결 IP 및 "Camera Ready" 출력 확인
+- 서버에서 `GET /api/camera/:moduleId/health` 성공 확인
+- 스트림 URL은 DB 모듈의 `camera_stream_url`에 정확히 반영
+
+---
+
+## 6. 단계별 절차
+
+### Step 1: ESP32 보드 패키지 설치
+1. Arduino IDE → 파일 → 환경설정 → 추가 보드 매니저 URL에:
+   `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
+2. 도구 → 보드 → 보드 매니저 → "esp32" 검색 설치
+3. 도구 → 보드 → ESP32 Arduino → 사용 중인 CAM 보드 선택 (예: AI Thinker ESP32-CAM)
+
+### Step 2: config.h / camera_wifi_config.h 설정
+```cpp
+// CES_CAMERA/camera_wifi_config.h 또는 config.h
+#define CAMERA_WIFI_SSID     "your_wifi_ssid"
+#define CAMERA_WIFI_PASSWORD "your_wifi_password"
+```
+- NVS에 저장된 값이 없을 때 fallback으로 사용
+- 시리얼: `SET_WIFI SSID PASSWORD` 또는 웹 `/wifi/set`로 런타임 변경 가능
+
+### Step 3: 보드/핀 매핑 확인
+- `board_config.h`: `CAMERA_MODEL_AI_THINKER` 등 모델별 매크로
+- `camera_pins.h`: 핀 번호 매핑 (보드 타입별로 다름)
+
+### Step 4: 업로드 및 시리얼 모니터
+1. USB-to-Serial 연결 후 GPIO0 GND 단축하여 부트로더 모드 진입 (필요 시)
+2. 포트 선택, 115200 baud, 업로드
+3. 시리얼 모니터에서 `WiFi connected`, `Camera Ready`, `IP: xxx.xxx.xxx.xxx` 확인
+
+### Step 5: DB에 스트림 URL 등록
+- `modules` 테이블 `camera_stream_url`: `http://ESP32_IP:81/stream`
+- 서버가 이 IP:81에 접근할 수 있어야 프록시 동작
+
+---
+
+## 7. 검증 방법 (정상/비정상 기준)
+
+| 항목 | 정상 | 비정상 |
+|------|------|--------|
+| 시리얼 부팅 | `Camera Ready`, `IP: xxx.xxx.xxx.xxx` | `Camera init failed`, `WiFi failed` |
+| 로컬 스트림 | 브라우저 `http://ESP32_IP:81/stream` → 영상 표시 | 404, 연결 거부 |
+| 서버 health | `GET /api/camera/:moduleId/health` 200 | 502, 504, 타임아웃 |
+| 프론트 스트림 | 대시보드 모듈 상세에서 영상 표시 | 검은 화면, 504 |
+
+---
+
+## 8. 자주 발생하는 문제와 해결
+
+| 현상 | 원인 | 해결 |
+|------|------|------|
+| Camera init failed | 보드/핀 불일치 | `board_config.h`, `camera_pins.h` 보드 타입 확인 |
+| WiFi 연결 실패 | SSID/비밀번호 오류 | NVS 초기화: 시리얼 `CLEAR_WIFI` 후 재설정 |
+| 서버 502/504 | 서버→ESP32 네트워크 미연결 | Tailscale/portproxy, 서버에서 `curl http://ESP32_IP:81/stream` 테스트 |
+| 스트림 끊김 | WiFi 불안정, 메모리 부족 | 해상도/프레임 낮추기, WiFi 신호 강화 |
+| /wifi/set 적용 후 무응답 | NVS 쓰기 실패 | 시리얼로 `SET_WIFI` 재시도, 전원 재부팅 |
+</script>
+  <script>
+    (function(){
+      var t = document.getElementById('md-content');
+      var out = document.getElementById('md-output');
+      var tocEl = document.getElementById('doc-toc');
+      var tocToggle = document.getElementById('toc-toggle');
+      var searchIn = document.getElementById('inpage-search');
+
+      function slug(txt) {
+        return txt.replace(/\s+/g, '-').replace(/[^\w\u3131-\u318E\uAC00-\uD7A3-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'h';
+      }
+
+      if (t && out && typeof marked !== 'undefined') {
+        out.innerHTML = marked.parse(t.textContent);
+      }
+
+      /* doc-postprocess: badges, section-card, table-wrap, external links */
+      if (out) {
+        var h1 = out.querySelector('h1');
+        if (h1) {
+          var badges = document.createElement('div');
+          badges.className = 'doc-badges';
+          var h1Text = (h1.textContent || '').toLowerCase();
+          var typeLabel = (h1Text.indexOf('체크리스트') >= 0 || h1Text.indexOf('납품') >= 0) ? '납품 문서' : '실무 가이드';
+          badges.innerHTML = '<span class="doc-badge">' + typeLabel + '</span><span class="doc-badge doc-badge-guide">가이드</span><span class="doc-badge doc-badge-date">최종 업데이트: ' + new Date().toLocaleDateString('ko-KR') + '</span>';
+          h1.parentNode.insertBefore(badges, h1.nextSibling);
+        }
+        out.querySelectorAll('table').forEach(function(tbl) {
+          if (!tbl.closest('.table-wrap')) {
+            var wrap = document.createElement('div');
+            wrap.className = 'table-wrap';
+            tbl.parentNode.insertBefore(wrap, tbl);
+            wrap.appendChild(tbl);
+          }
+        });
+        out.querySelectorAll('a[href^="http"]').forEach(function(a) {
+          if (!a.href || a.getAttribute('target')) return;
+          var loc = window.location;
+          try {
+            var url = new URL(a.href);
+            if (url.origin !== loc.origin) {
+              a.setAttribute('target', '_blank');
+              a.setAttribute('rel', 'noopener noreferrer');
+            }
+          } catch (e) {}
+        });
+        var h2List = out.querySelectorAll('h2');
+        h2List.forEach(function(h2) {
+          var section = document.createElement('section');
+          section.className = 'section-card';
+          var toMove = [h2];
+          var next = h2.nextElementSibling;
+          while (next && next.tagName !== 'H2') {
+            toMove.push(next);
+            next = next.nextElementSibling;
+          }
+          h2.parentNode.insertBefore(section, h2);
+          toMove.forEach(function(n) { section.appendChild(n); });
+        });
+      }
+
+      var headings = out ? out.querySelectorAll('h1, h2, h3') : [];
+      var used = {};
+      headings.forEach(function(h, i) {
+        var s = slug(h.textContent) || ('h' + i);
+        if (used[s]) used[s]++; else used[s] = 0;
+        var id = used[s] ? s + '-' + used[s] : s;
+        h.id = id;
+      });
+
+      if (tocEl) {
+        var html = '';
+        headings.forEach(function(h) {
+          var cls = 'block py-1 ' + (h.tagName === 'H2' ? 'toc-h2' : 'toc-h3');
+          html += '<a href="#' + h.id + '" class="' + cls + '">' + h.textContent + '</a>';
+        });
+        tocEl.innerHTML = html || '<span class="text-slate-500">목차 없음</span>';
+        tocEl.classList.remove('hidden');
+      }
+
+      if (tocToggle) {
+        tocToggle.addEventListener('click', function() {
+          tocEl.classList.toggle('hidden');
+          tocToggle.textContent = tocEl.classList.contains('hidden') ? '목차 펼치기/접기' : '목차 접기';
+        });
+      }
+
+      if (searchIn && out) {
+        function unhighlight() {
+          out.querySelectorAll('mark.hl').forEach(function(m) {
+            m.outerHTML = m.textContent;
+          });
+        }
+        function highlight(q) {
+          unhighlight();
+          if (!q) return;
+          var esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var re = new RegExp('(' + esc + ')', 'gi');
+          out.querySelectorAll('p, li, h1, h2, h3, td, th').forEach(function(el) {
+            if (el.querySelector('code, pre')) return;
+            var html = el.innerHTML;
+            var neu = html.replace(re, '<mark class="hl bg-yellow-200">$1</mark>');
+            if (neu !== html) el.innerHTML = neu;
+          });
+          var first = out.querySelector('mark.hl');
+          if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        searchIn.addEventListener('input', function() { highlight(searchIn.value.trim()); });
+      }
+    })();
+  </script>
+</body>
+</html>

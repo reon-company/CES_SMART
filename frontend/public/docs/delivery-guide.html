@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CES SMART 납품 가이드 - DOCS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* doc-common: TOC */
+    .doc-toc a.active { font-weight: 600; color: #4f46e5; }
+    .doc-toc a { color: #64748b; }
+    .doc-toc a:hover { color: #334155; }
+    .doc-toc .toc-h2 { padding-left: 0; }
+    .doc-toc .toc-h3 { padding-left: 1rem; font-size: 0.9em; }
+    .doc-content h1, .doc-content h2, .doc-content h3 { scroll-margin-top: 6rem; }
+    .doc-content .prose { max-width: none; }
+
+    /* doc-common: body gradient */
+    .doc-body-gradient {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+      min-height: 100vh;
+    }
+
+    /* doc-common: article card/glass */
+    .doc-article-card {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 4px 24px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06);
+      border: 1px solid rgba(226,232,240,0.9);
+    }
+
+    /* doc-common: headings */
+    .doc-content h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+    .doc-content h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 1.5rem;
+    }
+    .doc-content h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 1rem;
+    }
+
+    /* doc-common: section-card */
+    .section-card {
+      background: rgba(248,250,252,0.6);
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .section-card:last-child { margin-bottom: 0; }
+    .section-card > h2:first-child { margin-top: 0; }
+
+    /* doc-common: badges */
+    .doc-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0 1.25rem;
+    }
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border-radius: 9999px;
+      background: #e0e7ff;
+      color: #4338ca;
+    }
+    .doc-badge.doc-badge-guide { background: #ddd6fe; color: #5b21b6; }
+    .doc-badge.doc-badge-date { background: #e2e8f0; color: #475569; font-size: 0.7rem; }
+
+    /* doc-common: table */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      margin: 1rem 0;
+    }
+    .doc-content table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .doc-content table th {
+      background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+      font-weight: 600;
+      color: #334155;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    .doc-content table th:first-child { border-radius: 10px 0 0 0; }
+    .doc-content table th:last-child { border-radius: 0 10px 0 0; }
+    .doc-content table td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .doc-content table tr:hover td { background: #f8fafc; }
+    .doc-content table tbody tr:last-child td:first-child { border-radius: 0 0 0 10px; }
+    .doc-content table tbody tr:last-child td:last-child { border-radius: 0 0 10px 0; }
+
+    /* doc-common: code/pre */
+    .doc-content code {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 0.2em 0.45em;
+      border-radius: 6px;
+      font-size: 0.875em;
+    }
+    .doc-content pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      border: 1px solid #334155;
+    }
+    .doc-content pre code { background: none; padding: 0; }
+
+    /* doc-common: blockquote */
+    .doc-content blockquote {
+      border-left: 4px solid #6366f1;
+      background: #f8fafc;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      border-radius: 0 8px 8px 0;
+      color: #475569;
+    }
+
+    /* doc-common: checklist li */
+    .doc-content ul li:has(input[type="checkbox"]) {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+      border-radius: 6px;
+      padding-left: 0.5rem;
+    }
+    .doc-content ul li:has(input[type="checkbox"]):hover { background: rgba(241,245,249,0.8); }
+    .doc-content ul li:has(input[type="checkbox"]) input {
+      margin-top: 0.2rem;
+      accent-color: #4f46e5;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="doc-body-gradient min-h-screen">
+  <header class="sticky top-0 z-50 bg-slate-800 text-white shadow-lg">
+    <div class="container mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <a href="../index.html" class="px-3 py-1.5 bg-slate-600 rounded-lg hover:bg-slate-500 transition">홈</a>
+        <a href="../docs.html" class="px-3 py-1.5 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition font-medium">문서센터</a>
+      </div>
+      <h1 class="text-lg font-bold text-white">CES SMART 납품 가이드</h1>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <div class="mb-4">
+      <label for="inpage-search" class="block text-sm font-medium text-slate-600 mb-2">문서 내 검색</label>
+      <input type="text" id="inpage-search" placeholder="현재 문서에서 검색..." class="w-full max-w-md px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm" />
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6">
+      <aside class="lg:w-56 flex-shrink-0">
+        <div class="lg:sticky lg:top-24">
+          <button type="button" id="toc-toggle" class="lg:hidden w-full px-4 py-2 bg-white rounded-lg border border-slate-200 text-left font-medium text-slate-700">목차 펼치기/접기</button>
+          <nav id="doc-toc" class="doc-toc mt-2 hidden lg:block bg-white rounded-lg p-4 border border-slate-200 text-sm"></nav>
+        </div>
+      </aside>
+      <article class="flex-1 min-w-0 doc-article-card rounded-xl p-6 prose prose-slate max-w-none doc-content">
+        <div id="md-output"></div>
+      </article>
+    </div>
+  </main>
+  <script type="text/template" id="md-content"># CES SMART 납품 가이드 (KO)
+
+---
+
+## 대상 독자 / 목표
+
+| 항목 | 내용 |
+|------|------|
+| **대상 독자** | 신규 인수 담당자, 유지보수 개발자, 시스템 운영자 |
+| **목표** | CES_SMART 시스템의 개발/운영/유지보수 인수인계를 1~2일 내에 완료하고, 로컬 개발·서버 운영·하드웨어 연동을 재현 가능한 수준으로 이해 |
+
+---
+
+## 사전 준비물
+
+- [ ] Windows/macOS/Linux 중 하나의 개발 환경
+- [ ] Node.js 18+ (권장: LTS)
+- [ ] MySQL 8.0+
+- [ ] Arduino IDE 2.x 또는 PlatformIO
+- [ ] ESP32 보드용 Arduino/PlatformIO 환경
+- [ ] Git 클라이언트
+- [ ] 텍스트 에디터 또는 IDE (VS Code 권장)
+
+---
+
+## 1. 문서 목적
+- 본 문서는 `CES_SMART-main`의 개발/운영/유지보수 인수인계를 위한 통합 안내서입니다.
+- 신규 담당자가 코드 구조를 빠르게 이해하고, 로컬 개발/서버 운영/하드웨어 연동을 재현할 수 있도록 작성했습니다.
+
+## 2. 시스템 개요
+- 프론트엔드: Next.js + 정적 HTML 혼합 구조
+- 백엔드: Node.js/Express + MySQL
+- 하드웨어 1: Arduino R4 (센서/릴레이, 주기 전송)
+- 하드웨어 2: ESP32-CAM (MJPEG 스트림, WiFi 설정)
+- 외부 카메라 접근: 백엔드 카메라 프록시 + Tailscale/포트포워딩 조합
+
+## 3. 인벤토리 요약
+- BACKEND 소스: 19 파일 (`backend/**/*.js`)
+- FRONTEND 소스: 35 JS + 10 HTML (`frontend/**/*.js`, `frontend/public/**/*.html`)
+- ARDUINO 소스: 33 파일 (`arduino-r4/**/*.{ino,h,cpp}`)
+- ESP32-CAMERA 소스: 7 파일 (`CES_CAMERA/**/*.{ino,h,cpp}`)
+
+## 4. 핵심 아키텍처
+```mermaid
+flowchart LR
+UserWeb[WebClient] -->|Auth/API| Backend
+UserWeb -->|Image_Stream_Proxy| Backend
+Backend -->|SQL| MySQL
+ArduinoR4 -->|Sensors_Actuators_HTTP| Backend
+Backend -->|Camera_Proxy| ESP32Cam
+Backend -->|Camera_WiFi_Set_Proxy| ESP32Cam
+TailscaleBridge[Tailscale_PortProxy] --> ESP32Cam
+```
+
+## 5. 문서 읽기 순서
+1. `docs/handover/backend_handover_ko.md`
+2. `docs/handover/frontend_handover_ko.md`
+3. `docs/handover/arduino_handover_ko.md`
+4. `docs/handover/esp32_camera_handover_ko.md`
+5. `docs/handover/development_transfer_checklist_ko.md`
+6. `docs/handover/server_transfer_checklist_ko.md`
+7. `docs/handover/commenting_convention_ko.md`
+
+## 6. 빠른 운영 점검
+- API 상태: `GET /api/health`
+- 카메라 가용성: `GET /api/camera/:moduleId/health`
+- 카메라 스트림: `GET /api/camera/:moduleId/stream?token=...`
+- 설치 검증: `GET /api/setup/verify`
+
+## 7. 이관 시 가장 중요한 포인트
+- 개발 이관
+  - Next.js 페이지와 정적 HTML 페이지가 병행되므로 둘 다 수정 대상인지 확인
+  - 카메라 경로는 직접 IP 접근이 아니라 백엔드 프록시 사용이 기준
+- 서버 이관
+  - `backend/.env`와 PM2 설정, CORS origin, 도메인/Nginx, Tailscale 경로를 함께 이전
+  - 카메라 네트워크 경로(Tailscale/portproxy) 없으면 외부 스트리밍이 실패
+
+## 8. 운영 리스크 요약
+- CORS/PNA 제약: 브라우저에서 로컬 대역 직접 접근 불가, 반드시 서버 프록시 경유
+- 토큰 만료: 프론트에서 401 처리 후 재로그인 유도 동작 존재
+- 카메라 네트워크 의존: ESP32-CAM URL 자체보다 서버-카메라 간 경로가 중요
+
+---
+
+## 9. 단계별 인수인계 절차
+
+### Step 1: 저장소 및 환경 확인
+1. 저장소 클론 또는 압축 해제
+   ```bash
+   cd c:\KKJ\CES_SMART-main\CES_SMART-main
+   ```
+2. `backend/.env.example`, `frontend/.env.local.example` 복사 후 `.env`, `.env.local` 생성
+3. 문서 읽기 순서대로 `docs/handover/` 내 문서 검토
+
+### Step 2: 백엔드 로컬 기동
+```bash
+cd backend
+npm install
+npm start
+```
+- 정상: `Server running on port 3000` 출력
+- 비정상: `DB connection failed` → MySQL 서비스 및 `.env` DB 설정 확인
+
+### Step 3: 프론트엔드 로컬 기동
+```bash
+cd frontend
+npm install
+npm run dev
+```
+- 정상: `http://localhost:3001` 접속 시 로그인 페이지 표시
+- 비정상: `NEXT_PUBLIC_API_BASE_URL` 미설정 시 API 호출 실패
+
+### Step 4: Arduino/ESP32 하드웨어 점검
+- `arduino-r4/CES_SmartFarm/config.h`: `MODULE_ID`, `API_BASE_URL` 확인
+- `CES_CAMERA/config.example.h` 참고해 `config.h` 생성 후 보드 타입/핀 매핑 검증
+
+---
+
+## 10. 검증 방법 (정상/비정상 기준)
+
+| 검증 항목 | 정상 기준 | 비정상 기준 |
+|----------|-----------|-------------|
+| API 헬스 | `GET /api/health` → `200 {"status":"ok"}` | 500, 연결 거부, 타임아웃 |
+| 카메라 헬스 | `GET /api/camera/:moduleId/health` → 200 | 502, 504, 타임아웃 |
+| 로그인 | POST /api/auth/login → JWT 토큰 반환 | 401, 500 |
+| 모듈 목록 | GET /api/modules (Authorization) → JSON 배열 | 401, 빈 배열(권한 문제) |
+| 설치 검증 | `GET /api/setup/verify` → 스크립트 실행 결과 | 404, 500 |
+
+---
+
+## 11. 자주 발생하는 문제와 해결
+
+| 현상 | 원인 | 해결 방법 |
+|------|------|----------|
+| 로그인 후 바로 401 | JWT_SECRET 불일치 또는 만료 | `.env` JWT_SECRET 통일, 로그아웃 후 재로그인 |
+| 카메라 검은 화면/504 | 서버→ESP32 네트워크 끊김 | Tailscale/portproxy, ESP32 IP:81 연결 테스트 |
+| CORS 에러 | 요청 Origin이 허용 목록에 없음 | `server.js` CORS_ORIGIN에 해당 Origin 추가 |
+| Arduino "Connection failed" | API_BASE_URL 오류 또는 방화벽 | `config.h` URL 확인, 서버 포트 개방 확인 |
+| 모듈 목록 빈 배열 | user_id/모듈 소유권 불일치 | DB `modules` 테이블 `user_id` 확인 |
+</script>
+  <script>
+    (function(){
+      var t = document.getElementById('md-content');
+      var out = document.getElementById('md-output');
+      var tocEl = document.getElementById('doc-toc');
+      var tocToggle = document.getElementById('toc-toggle');
+      var searchIn = document.getElementById('inpage-search');
+
+      function slug(txt) {
+        return txt.replace(/\s+/g, '-').replace(/[^\w\u3131-\u318E\uAC00-\uD7A3-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'h';
+      }
+
+      if (t && out && typeof marked !== 'undefined') {
+        out.innerHTML = marked.parse(t.textContent);
+      }
+
+      /* doc-postprocess: badges, section-card, table-wrap, external links */
+      if (out) {
+        var h1 = out.querySelector('h1');
+        if (h1) {
+          var badges = document.createElement('div');
+          badges.className = 'doc-badges';
+          var h1Text = (h1.textContent || '').toLowerCase();
+          var typeLabel = (h1Text.indexOf('체크리스트') >= 0 || h1Text.indexOf('납품') >= 0) ? '납품 문서' : '실무 가이드';
+          badges.innerHTML = '<span class="doc-badge">' + typeLabel + '</span><span class="doc-badge doc-badge-guide">가이드</span><span class="doc-badge doc-badge-date">최종 업데이트: ' + new Date().toLocaleDateString('ko-KR') + '</span>';
+          h1.parentNode.insertBefore(badges, h1.nextSibling);
+        }
+        out.querySelectorAll('table').forEach(function(tbl) {
+          if (!tbl.closest('.table-wrap')) {
+            var wrap = document.createElement('div');
+            wrap.className = 'table-wrap';
+            tbl.parentNode.insertBefore(wrap, tbl);
+            wrap.appendChild(tbl);
+          }
+        });
+        out.querySelectorAll('a[href^="http"]').forEach(function(a) {
+          if (!a.href || a.getAttribute('target')) return;
+          var loc = window.location;
+          try {
+            var url = new URL(a.href);
+            if (url.origin !== loc.origin) {
+              a.setAttribute('target', '_blank');
+              a.setAttribute('rel', 'noopener noreferrer');
+            }
+          } catch (e) {}
+        });
+        var h2List = out.querySelectorAll('h2');
+        h2List.forEach(function(h2) {
+          var section = document.createElement('section');
+          section.className = 'section-card';
+          var toMove = [h2];
+          var next = h2.nextElementSibling;
+          while (next && next.tagName !== 'H2') {
+            toMove.push(next);
+            next = next.nextElementSibling;
+          }
+          h2.parentNode.insertBefore(section, h2);
+          toMove.forEach(function(n) { section.appendChild(n); });
+        });
+      }
+
+      var headings = out ? out.querySelectorAll('h1, h2, h3') : [];
+      var used = {};
+      headings.forEach(function(h, i) {
+        var s = slug(h.textContent) || ('h' + i);
+        if (used[s]) used[s]++; else used[s] = 0;
+        var id = used[s] ? s + '-' + used[s] : s;
+        h.id = id;
+      });
+
+      if (tocEl) {
+        var html = '';
+        headings.forEach(function(h) {
+          var cls = 'block py-1 ' + (h.tagName === 'H2' ? 'toc-h2' : 'toc-h3');
+          html += '<a href="#' + h.id + '" class="' + cls + '">' + h.textContent + '</a>';
+        });
+        tocEl.innerHTML = html || '<span class="text-slate-500">목차 없음</span>';
+        tocEl.classList.remove('hidden');
+      }
+
+      if (tocToggle) {
+        tocToggle.addEventListener('click', function() {
+          tocEl.classList.toggle('hidden');
+          tocToggle.textContent = tocEl.classList.contains('hidden') ? '목차 펼치기/접기' : '목차 접기';
+        });
+      }
+
+      if (searchIn && out) {
+        function unhighlight() {
+          out.querySelectorAll('mark.hl').forEach(function(m) {
+            m.outerHTML = m.textContent;
+          });
+        }
+        function highlight(q) {
+          unhighlight();
+          if (!q) return;
+          var esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var re = new RegExp('(' + esc + ')', 'gi');
+          out.querySelectorAll('p, li, h1, h2, h3, td, th').forEach(function(el) {
+            if (el.querySelector('code, pre')) return;
+            var html = el.innerHTML;
+            var neu = html.replace(re, '<mark class="hl bg-yellow-200">$1</mark>');
+            if (neu !== html) el.innerHTML = neu;
+          });
+          var first = out.querySelector('mark.hl');
+          if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        searchIn.addEventListener('input', function() { highlight(searchIn.value.trim()); });
+      }
+    })();
+  </script>
+</body>
+</html>

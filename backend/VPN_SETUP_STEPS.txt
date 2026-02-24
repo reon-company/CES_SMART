@@ -1,0 +1,76 @@
+==========================================
+VPN 설정 단계별 명령어 (서버에서 실행)
+==========================================
+
+[1단계] 서버에 SSH 접속
+------------------------
+Windows PowerShell에서:
+ssh -i C:\KKJ\LightsailDefaultKey-ap-northeast-2.pem ubuntu@43.201.148.223
+
+
+[2단계] WireGuard 설치
+----------------------
+sudo apt update
+sudo apt install -y wireguard wireguard-tools
+
+
+[3단계] 클라이언트 키 생성
+--------------------------
+cd /etc/wireguard
+sudo wg genkey | sudo tee client_private.key | sudo wg pubkey | sudo tee client_public.key
+sudo chmod 600 client_private.key
+
+# 공개키 확인 (이것을 VPN 서버에 등록해야 함)
+sudo cat client_public.key
+
+
+[4단계] 설정 파일 생성
+----------------------
+sudo nano /etc/wireguard/wg0.conf
+
+# 다음 내용 입력 (값은 실제 정보로 변경):
+[Interface]
+PrivateKey = <client_private.key의_내용>
+Address = 10.0.0.2/24
+DNS = 8.8.8.8
+
+[Peer]
+PublicKey = <VPN서버의_공개키>
+Endpoint = <ESP32-CAM_네트워크_공인IP>:51820
+AllowedIPs = 192.168.1.0/24
+PersistentKeepalive = 25
+
+# 저장: Ctrl+O, Enter, Ctrl+X
+
+
+[5단계] VPN 시작 및 테스트
+--------------------------
+# VPN 시작
+sudo wg-quick up wg0
+
+# 상태 확인
+sudo wg show
+
+# ESP32-CAM 접속 테스트
+ping 192.168.1.13
+
+
+[6단계] 자동 시작 설정
+----------------------
+sudo systemctl enable wg-quick@wg0
+sudo systemctl start wg-quick@wg0
+
+
+[7단계] VPN 모니터링 시작 (선택사항)
+-----------------------------------
+cd ~/ces-smartfarm/backend
+pm2 start ecosystem.config.js
+pm2 save
+
+
+==========================================
+중요: VPN 서버 설정이 먼저 필요합니다!
+==========================================
+
+ESP32-CAM 네트워크에 VPN 서버를 먼저 설정해야 합니다.
+자세한 내용은 VPN_SETUP_GUIDE.md를 참고하세요.

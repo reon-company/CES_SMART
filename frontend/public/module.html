@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모듈 상세 - CES 스마트팜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+        * {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <a href="dashboard.html" class="text-white hover:text-gray-200">
+                        <span class="text-2xl">←</span>
+                    </a>
+                    <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                        <span class="text-2xl">🌱</span>
+                    </div>
+                    <h1 class="text-2xl font-bold">모듈 상세</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="goModuleSettings()"
+                        class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">
+                        세팅
+                    </button>
+                    <span id="userEmail" class="text-sm">로딩 중...</span>
+                    <button onclick="auth.logout()"
+                        class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">
+                        로그아웃
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <div id="moduleInfo" class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <h2 id="moduleName" class="text-3xl font-bold text-gray-800 mb-2">로딩 중...</h2>
+                <p id="moduleMac" class="text-gray-600">MAC: 로딩 중...</p>
+            </div>
+        </div>
+
+        <!-- 실시간 카메라 섹션 (항상 표시) -->
+        <div id="cameraSection" class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-3xl">📷</span>
+                        <h2 class="text-2xl font-bold text-gray-900">실시간 카메라</h2>
+                    </div>
+                    <div id="cameraStatus" class="text-sm text-gray-500"></div>
+                </div>
+                <div id="cameraContainer" class="rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100 flex items-center justify-center">
+                    <img id="cameraStream" src="" alt="실시간 카메라 영상" class="w-full h-full object-contain" style="display: none;">
+                    <div id="cameraLoading" class="text-center p-8" style="display: none;">
+                        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                        <p class="text-gray-500">카메라 스트림 연결 중...</p>
+                    </div>
+                    <div id="cameraNoUrl" class="text-center p-8">
+                        <div class="text-6xl mb-4">📷</div>
+                        <p class="text-gray-700 font-semibold mb-2">카메라 스트림 URL이 설정되지 않았습니다</p>
+                        <p class="text-gray-500 text-sm mb-4">
+                            모듈 세팅 버튼을 클릭하여 카메라 스트림 URL을 입력하세요.
+                        </p>
+                        <p class="text-gray-400 text-xs">
+                            형식: <code class="bg-gray-200 px-2 py-1 rounded">http://&lt;ESP32-CAM IP&gt;:81/stream</code>
+                        </p>
+                        <p class="text-gray-400 text-xs mt-2">
+                            예: <code class="bg-gray-200 px-2 py-1 rounded">http://100.69.169.126:81/stream</code> (Tailscale) 또는 <code class="bg-gray-200 px-2 py-1 rounded">http://192.168.1.13:81/stream</code>
+                        </p>
+                    </div>
+                    <p id="cameraError" class="text-gray-500 p-4 text-center" style="display: none;">
+                        카메라에 연결할 수 없습니다.<br>
+                        서버(프록시)에서 ESP32-CAM 주소로 접근 가능한지(Tailscale/VPN/포트포워딩), 스트림 URL이 맞는지 확인해주세요.
+                    </p>
+                </div>
+                <div id="cameraUrlInfo" class="mt-4 flex items-center justify-between" style="display: none;">
+                    <p class="text-sm text-gray-500">스트림 URL: <span id="cameraStreamUrl" class="font-mono break-all"></span></p>
+                    <button id="refreshCameraBtn" onclick="refreshCameraStream()" class="text-sm text-blue-500 hover:text-blue-700 font-medium">
+                        🔄 새로고침
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 센서 데이터 섹션 (카메라 전용 모듈이 아닐 때만 표시) -->
+        <div id="sensorSection" class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <div class="flex items-center space-x-3 mb-6">
+                    <span class="text-3xl">📊</span>
+                    <h2 class="text-2xl font-bold text-gray-900">센서 데이터</h2>
+                </div>
+                <div id="sensorData" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border-2 border-blue-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">온도</p>
+                                <p class="text-3xl font-bold text-blue-700">
+                                    <span id="temperature">--</span>
+                                    <span class="text-lg">°C</span>
+                                </p>
+                            </div>
+                            <span class="text-4xl">🌡️</span>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border-2 border-green-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">습도</p>
+                                <p class="text-3xl font-bold text-green-700">
+                                    <span id="humidity">--</span>
+                                    <span class="text-lg">%</span>
+                                </p>
+                            </div>
+                            <span class="text-4xl">💧</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-sm text-gray-500">
+                    마지막 업데이트: <span id="lastUpdate">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 릴레이 제어 섹션 (카메라 전용 모듈이 아닐 때만 표시) -->
+        <div id="relaySection" class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+                <div class="flex items-center space-x-3 mb-6">
+                    <span class="text-3xl">⚙️</span>
+                    <h2 class="text-2xl font-bold text-gray-900">릴레이 제어</h2>
+                </div>
+                <div class="flex items-center justify-between p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-4xl">🔌</span>
+                        <div>
+                            <p class="text-lg font-semibold text-gray-800">릴레이 모듈</p>
+                            <p class="text-sm text-gray-600">현재 상태: <span id="relayStatus" class="font-bold">확인 중...</span></p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="relaySwitch" class="sr-only peer">
+                        <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                        <span class="ml-3 text-sm font-medium text-gray-700" id="relayLabel">OFF</span>
+                    </label>
+                </div>
+                <div id="relayMessage" class="mt-4 text-sm text-gray-600"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 수정 모달 -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-6">모듈 수정</h2>
+
+            <div id="editError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 hidden"></div>
+
+            <form id="editForm" onsubmit="handleUpdateModule(event)">
+                <div class="mb-4">
+                    <label for="editName" class="block text-gray-700 text-sm font-bold mb-2">
+                        모듈 이름
+                    </label>
+                    <input
+                        type="text"
+                        id="editName"
+                        name="name"
+                        required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    />
+                </div>
+
+                <div class="mb-4">
+                    <label for="editModuleId" class="block text-gray-700 text-sm font-bold mb-2">
+                        모듈 ID
+                    </label>
+                    <input
+                        type="text"
+                        id="editModuleId"
+                        name="module_id"
+                        disabled
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-500 bg-gray-100 cursor-not-allowed"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">모듈 ID는 수정할 수 없습니다</p>
+                </div>
+
+                <div class="mb-4">
+                    <label for="editWifiSsid" class="block text-gray-700 text-sm font-bold mb-2">
+                        WiFi 이름 (SSID) <span class="text-gray-400 font-normal">(아두이노 R4용, 선택)</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="editWifiSsid"
+                        name="wifi_ssid"
+                        placeholder="예: SK_WiFiGIGA91A3_2.4G"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    />
+                </div>
+
+                <div class="mb-4">
+                    <label for="editWifiPassword" class="block text-gray-700 text-sm font-bold mb-2">
+                        WiFi 비밀번호 <span class="text-gray-400 font-normal">(아두이노 R4용, 선택)</span>
+                    </label>
+                    <input
+                        type="password"
+                        id="editWifiPassword"
+                        name="wifi_password"
+                        placeholder="비밀번호를 변경하려면 새 비밀번호를 입력하세요"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    />
+                    <p class="text-xs text-gray-500 mt-1" id="editWifiPasswordHint">
+                        비밀번호를 변경하지 않으려면 비워두세요
+                    </p>
+                </div>
+
+                <div class="mb-6">
+                    <label for="editCameraStreamUrl" class="block text-gray-700 text-sm font-bold mb-2">
+                        카메라 스트림 URL <span class="text-gray-400 font-normal">(ESP32-CAM용, 선택)</span>
+                    </label>
+                    <input
+                        type="url"
+                        id="editCameraStreamUrl"
+                        name="camera_stream_url"
+                        placeholder="예: http://192.168.0.100:81/stream"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">ESP32-CAM 실시간 영상을 보려면 스트림 URL을 입력하세요 (포트 81, /stream)</p>
+                </div>
+
+                <div class="flex justify-end space-x-4">
+                    <button
+                        type="button"
+                        onclick="hideEditModal()"
+                        id="editCancelBtn"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                        취소
+                    </button>
+                    <button
+                        type="submit"
+                        id="editSubmitBtn"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        수정
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // 유지보수 메모:
+        // - 이 페이지는 카메라/센서/릴레이 정적 제어 UI입니다.
+        // - 카메라 렌더링은 반드시 백엔드 프록시 URL 변환을 거쳐야 합니다.
+        // - 모바일 overflow 방지를 위해 w-full + aspect-video 크기 정책을 유지해야 합니다.
+        // API_BASE_URL is already defined in api.js, so we don't need to redeclare it
+        
+        if (!auth.isAuthenticated()) {
+            window.location.href = 'login.html';
+        }
+
+        // Get module ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        let moduleId = urlParams.get('id');
+
+        if (!moduleId) {
+            alert('모듈 ID가 없습니다.');
+            window.location.href = 'dashboard.html';
+        }
+
+        // 전역 접근을 위해 window 객체에 할당
+        window.moduleId = moduleId;
+
+        let module = null;
+        let moduleModuleId = null; // module_id (예: MODULE_001)
+        
+        // 전역 접근을 위해 window 객체에 할당
+        window.module = module;
+        let sensorUpdateInterval = null;
+        let relayUpdateInterval = null;
+
+        async function loadUserInfo() {
+            try {
+                const user = await authAPI.getMe();
+                document.getElementById('userEmail').textContent = user.email || '사용자';
+            } catch (err) {
+                console.error('사용자 정보 로드 실패:', err);
+            }
+        }
+
+        async function loadModule() {
+            try {
+                console.log('Loading module with database ID:', moduleId);
+                const response = await modulesAPI.getById(moduleId);
+                module = response.module || response;
+                
+                // 전역 접근을 위해 window 객체에 할당
+                window.module = module;
+                
+                console.log('Module loaded:', module);
+                
+                // module_id 저장 (센서 데이터 및 액추에이터 조회에 사용)
+                moduleModuleId = module.module_id;
+                window.moduleModuleId = module.module_id; // 전역 변수로 저장 (카메라 프록시 URL 변환용)
+                
+                if (!moduleModuleId) {
+                    throw new Error('Module ID not found in module data');
+                }
+                
+                document.getElementById('moduleName').textContent = module.name || '모듈';
+                document.getElementById('moduleMac').textContent = `Module ID: ${moduleModuleId}`;
+                
+                // 카메라 섹션은 항상 표시
+                const cameraSection = document.getElementById('cameraSection');
+                const cameraNoUrl = document.getElementById('cameraNoUrl');
+                const cameraUrlInfo = document.getElementById('cameraUrlInfo');
+                const cameraContainer = document.getElementById('cameraContainer');
+                
+                console.log('Module camera_stream_url:', module.camera_stream_url);
+                
+                if (module.camera_stream_url && module.camera_stream_url.trim()) {
+                    // 카메라 스트림 URL이 있으면 스트림 표시
+                    console.log('Displaying camera stream');
+                    if (cameraNoUrl) cameraNoUrl.style.display = 'none';
+                    if (cameraUrlInfo) cameraUrlInfo.style.display = 'flex';
+                    const cameraStreamUrlEl = document.getElementById('cameraStreamUrl');
+                    if (cameraStreamUrlEl) {
+                        cameraStreamUrlEl.textContent = module.camera_stream_url;
+                    }
+                    
+                    // 카메라 컨테이너 크기 설정
+                    if (cameraContainer) {
+                        const isMobile = window.innerWidth < 768;
+                        cameraContainer.className = 'w-full rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100 aspect-video max-w-6xl mx-auto flex items-center justify-center';
+                        cameraContainer.style.minHeight = isMobile ? '220px' : '400px';
+                    }
+                    
+                    // 카메라 스트림 로드 (약간의 지연을 두어 DOM이 완전히 업데이트된 후 실행)
+                    setTimeout(() => {
+                        loadCameraStream(module.camera_stream_url);
+                    }, 100);
+                } else {
+                    // 카메라 스트림 URL이 없으면 안내 메시지 표시
+                    console.log('No camera stream URL, showing message');
+                    if (cameraNoUrl) cameraNoUrl.style.display = 'block';
+                    if (cameraUrlInfo) cameraUrlInfo.style.display = 'none';
+                    const img = document.getElementById('cameraStream');
+                    const loading = document.getElementById('cameraLoading');
+                    const error = document.getElementById('cameraError');
+                    if (img) img.style.display = 'none';
+                    if (loading) loading.style.display = 'none';
+                    if (error) error.style.display = 'none';
+                    
+                    // 컨테이너 크기 조정
+                    if (cameraContainer) {
+                        const isMobile = window.innerWidth < 768;
+                        cameraContainer.className = 'w-full rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 flex items-center justify-center';
+                        cameraContainer.style.minHeight = isMobile ? '220px' : '300px';
+                    }
+                }
+                
+                // 센서 데이터와 릴레이 제어 섹션은 항상 표시 (카메라와 함께 사용 가능)
+                document.getElementById('sensorSection').style.display = 'block';
+                document.getElementById('relaySection').style.display = 'block';
+                
+                // 모듈 정보 로드 후 센서 데이터와 릴레이 상태 로드
+                loadSensorData();
+                loadRelayStatus();
+            } catch (err) {
+                console.error('모듈 정보 로드 실패:', err);
+                console.error('Error details:', err.response || err);
+                alert('모듈 정보를 불러오는데 실패했습니다: ' + (err.response?.data?.message || err.message));
+                window.location.href = 'dashboard.html';
+            }
+        }
+
+        // 카메라 스트림 URL을 서버 프록시 URL로 변환
+        // 외부 네트워크 사용자도 같은 방식으로 보기 위해 항상 서버를 경유한다.
+        function getProxyStreamUrl(streamUrl, moduleId) {
+            if (!streamUrl || !moduleId) {
+                return streamUrl;
+            }
+
+            try {
+                const url = new URL(streamUrl);
+
+                // 이미 서버 프록시 URL이면 그대로 사용
+                if (url.pathname.includes('/api/camera/')) {
+                    return streamUrl;
+                }
+
+                // 서버 프록시 URL로 변환 (img 태그용 토큰 쿼리 포함)
+                const token = localStorage.getItem('token');
+                const proxyUrl = `${API_BASE_URL}/api/camera/${moduleId}/stream${token ? '?token=' + encodeURIComponent(token) : ''}`;
+                console.log('Converting stream URL to proxy URL:', streamUrl, '->', proxyUrl);
+                return proxyUrl;
+            } catch (e) {
+                console.error('Invalid stream URL:', streamUrl, e);
+                return streamUrl;
+            }
+        }
+
+        function loadCameraStream(streamUrl) {
+            if (!streamUrl) {
+                console.log('loadCameraStream: No stream URL provided');
+                return;
+            }
+            
+            // module_id를 사용하여 프록시 URL로 변환
+            const currentModuleId = window.moduleModuleId || moduleModuleId;
+            const finalStreamUrl = getProxyStreamUrl(streamUrl, currentModuleId);
+            
+            console.log('loadCameraStream: Loading stream from', finalStreamUrl, '(original:', streamUrl, ')');
+            
+            const img = document.getElementById('cameraStream');
+            const loading = document.getElementById('cameraLoading');
+            const error = document.getElementById('cameraError');
+            const status = document.getElementById('cameraStatus');
+            const noUrl = document.getElementById('cameraNoUrl');
+            
+            if (!img || !loading || !error || !status || !noUrl) {
+                console.error('loadCameraStream: Required elements not found', { img, loading, error, status, noUrl });
+                return;
+            }
+            
+            // 초기화
+            noUrl.style.display = 'none';
+            img.style.display = 'none';
+            error.style.display = 'none';
+            loading.style.display = 'block';
+            status.textContent = '연결 중...';
+            status.className = 'text-sm text-gray-500';
+            
+            // 프록시 URL인 경우 타임스탬프 추가 (인증 토큰은 자동으로 추가됨)
+            // 로컬 URL인 경우에만 타임스탬프 추가
+            const isProxyUrl = finalStreamUrl.includes('/api/camera/');
+            const urlWithTimestamp = isProxyUrl 
+                ? finalStreamUrl 
+                : finalStreamUrl + (finalStreamUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+            console.log('loadCameraStream: Final URL', urlWithTimestamp);
+            
+            // 이미지 요소 교체 (이벤트 리스너 충돌 방지)
+            const newImg = document.createElement('img');
+            newImg.id = 'cameraStream';
+            newImg.alt = '실시간 카메라 영상';
+            newImg.className = 'block w-full h-full max-w-full max-h-full object-contain';
+            newImg.style.display = 'none';
+            newImg.crossOrigin = 'anonymous';
+            
+            // 기존 이미지 교체
+            if (img && img.parentNode) {
+                img.parentNode.replaceChild(newImg, img);
+            } else {
+                const container = document.getElementById('cameraContainer');
+                if (container) {
+                    container.insertBefore(newImg, container.firstChild);
+                }
+            }
+            
+            const newImgElement = document.getElementById('cameraStream');
+            if (!newImgElement) {
+                console.error('Failed to create/replace image element');
+                return;
+            }
+            
+            // 이벤트 리스너 설정
+            newImgElement.onload = function() {
+                console.log('loadCameraStream: Image loaded successfully');
+                loading.style.display = 'none';
+                newImgElement.style.display = 'block';
+                error.style.display = 'none';
+                status.textContent = '연결됨';
+                status.className = 'text-sm text-green-600';
+            };
+            
+            newImgElement.onerror = function(e) {
+                console.error('loadCameraStream: Image load error', e);
+                loading.style.display = 'none';
+                newImgElement.style.display = 'none';
+                error.style.display = 'block';
+                status.textContent = '연결 실패';
+                status.className = 'text-sm text-red-600';
+            };
+            
+            // 이미지 소스 설정 (MJPEG 스트림)
+            console.log('Setting image source to:', urlWithTimestamp);
+            newImgElement.src = urlWithTimestamp;
+            
+            // MJPEG 스트림은 계속 업데이트되어야 하므로 주기적으로 새로고침
+            // 하지만 일반 img 태그로는 자동으로 업데이트되므로 추가 작업 불필요
+        }
+        
+        function refreshCameraStream() {
+            const streamUrl = document.getElementById('cameraStreamUrl').textContent;
+            if (streamUrl) {
+                loadCameraStream(streamUrl);
+            }
+        }
+        
+        window.refreshCameraStream = refreshCameraStream;
+
+        async function loadSensorData() {
+            // module_id가 없으면 대기
+            if (!moduleModuleId) {
+                console.log('Waiting for module_id...');
+                return;
+            }
+            
+            try {
+                const token = auth.getToken();
+                if (!token) {
+                    console.error('No authentication token');
+                    return;
+                }
+                
+                console.log('Loading sensor data for module_id:', moduleModuleId);
+                const response = await fetch(`${API_BASE_URL}/api/sensors/latest/${moduleModuleId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // 404는 데이터가 없는 경우이므로 정상 - 조용히 처리
+                if (response.status === 404) {
+                    document.getElementById('temperature').textContent = '--';
+                    document.getElementById('humidity').textContent = '--';
+                    document.getElementById('lastUpdate').textContent = '데이터 없음';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Sensor data error:', errorData);
+                    throw new Error(errorData.message || '센서 데이터를 불러올 수 없습니다.');
+                }
+                
+                const result = await response.json();
+                console.log('Sensor data result:', result);
+                
+                const data = result.data || result;
+                
+                // DHT11 데이터 (온도, 습도)
+                if (data.temperature !== null && data.temperature !== undefined) {
+                    document.getElementById('temperature').textContent = parseFloat(data.temperature).toFixed(1);
+                } else {
+                    document.getElementById('temperature').textContent = '--';
+                }
+                
+                if (data.humidity !== null && data.humidity !== undefined) {
+                    document.getElementById('humidity').textContent = parseFloat(data.humidity).toFixed(1);
+                } else {
+                    document.getElementById('humidity').textContent = '--';
+                }
+                
+                // 마지막 업데이트 시간
+                if (data.created_at) {
+                    const updateTime = new Date(data.created_at);
+                    document.getElementById('lastUpdate').textContent = updateTime.toLocaleTimeString('ko-KR');
+                } else {
+                    const now = new Date();
+                    document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('ko-KR');
+                }
+            } catch (err) {
+                console.error('센서 데이터 로드 실패:', err);
+                console.error('Error details:', err.response || err);
+                document.getElementById('temperature').textContent = '--';
+                document.getElementById('humidity').textContent = '--';
+                document.getElementById('lastUpdate').textContent = '오류';
+            }
+        }
+
+        async function loadRelayStatus() {
+            // module_id가 없으면 대기
+            if (!moduleModuleId) {
+                console.log('Waiting for module_id...');
+                return;
+            }
+            
+            try {
+                console.log('Loading relay status for module_id:', moduleModuleId);
+                
+                // module_id를 사용하여 액추에이터 상태 조회
+                const token = auth.getToken();
+                if (!token) {
+                    console.error('No authentication token');
+                    return;
+                }
+                
+                // module_id를 사용하여 직접 API 호출
+                const response = await fetch(`${API_BASE_URL}/api/actuators/${moduleModuleId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Relay status response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Relay status error:', errorData);
+                    throw new Error(errorData.message || '릴레이 상태를 불러올 수 없습니다.');
+                }
+                
+                const result = await response.json();
+                console.log('Relay status result:', result);
+                
+                const status = result.status || result;
+                
+                // 릴레이 상태 확인 (여러 가능한 필드명 시도)
+                let relayState = false;
+                if (status.relay !== undefined) {
+                    relayState = Boolean(status.relay);
+                } else if (status.relay_state !== undefined) {
+                    relayState = Boolean(status.relay_state);
+                } else if (status.state !== undefined) {
+                    relayState = Boolean(status.state);
+                }
+                
+                console.log('Relay state:', relayState);
+                
+                // 스위치 상태 업데이트
+                const switchElement = document.getElementById('relaySwitch');
+                if (switchElement) {
+                    switchElement.checked = relayState;
+                }
+                
+                // 상태 표시 업데이트
+                const statusElement = document.getElementById('relayStatus');
+                if (statusElement) {
+                    statusElement.textContent = relayState ? 'ON' : 'OFF';
+                    statusElement.className = relayState ? 'font-bold text-green-600' : 'font-bold text-gray-600';
+                }
+                
+                const labelElement = document.getElementById('relayLabel');
+                if (labelElement) {
+                    labelElement.textContent = relayState ? 'ON' : 'OFF';
+                }
+            } catch (err) {
+                console.error('릴레이 상태 로드 실패:', err);
+                console.error('Error details:', err.response || err);
+                const statusElement = document.getElementById('relayStatus');
+                if (statusElement) {
+                    statusElement.textContent = '오류';
+                    statusElement.className = 'font-bold text-red-600';
+                }
+            }
+        }
+
+        async function toggleRelay() {
+            if (!moduleModuleId) {
+                alert('모듈 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            
+            const switchElement = document.getElementById('relaySwitch');
+            if (!switchElement) {
+                console.error('Relay switch element not found');
+                return;
+            }
+            
+            const newState = switchElement.checked;
+            const messageDiv = document.getElementById('relayMessage');
+            
+            console.log('Toggle relay called:', { moduleModuleId, newState });
+            
+            messageDiv.textContent = '제어 중...';
+            messageDiv.className = 'mt-4 text-sm text-blue-600';
+            
+            try {
+                // module_id를 사용하여 릴레이 제어 API 호출
+                const token = auth.getToken();
+                if (!token) {
+                    throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+                }
+                
+                const url = `${API_BASE_URL}/api/actuators/${moduleModuleId}/relay`;
+                const requestBody = { action: newState ? 'on' : 'off' };
+                
+                console.log('Sending relay control request:', { url, body: requestBody });
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                console.log('Relay control response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Relay control error response:', errorData);
+                    throw new Error(errorData.message || `서버 오류 (${response.status})`);
+                }
+                
+                const result = await response.json();
+                console.log('Relay control success:', result);
+                
+                messageDiv.textContent = newState ? '릴레이가 켜졌습니다.' : '릴레이가 꺼졌습니다.';
+                messageDiv.className = 'mt-4 text-sm text-green-600';
+                
+                // 상태 업데이트
+                const statusElement = document.getElementById('relayStatus');
+                if (statusElement) {
+                    statusElement.textContent = newState ? 'ON' : 'OFF';
+                    statusElement.className = newState ? 'font-bold text-green-600' : 'font-bold text-gray-600';
+                }
+                
+                const labelElement = document.getElementById('relayLabel');
+                if (labelElement) {
+                    labelElement.textContent = newState ? 'ON' : 'OFF';
+                }
+                
+                // 3초 후 메시지 제거
+                setTimeout(() => {
+                    messageDiv.textContent = '';
+                }, 3000);
+                
+                // 상태 다시 로드 (서버에서 최신 상태 확인)
+                setTimeout(loadRelayStatus, 500);
+            } catch (err) {
+                console.error('릴레이 제어 실패:', err);
+                console.error('Error details:', err);
+                
+                messageDiv.textContent = err.message || '릴레이 제어에 실패했습니다.';
+                messageDiv.className = 'mt-4 text-sm text-red-600';
+                
+                // 스위치 되돌리기
+                switchElement.checked = !newState;
+                
+                // 상태 다시 로드
+                setTimeout(loadRelayStatus, 1000);
+            }
+        }
+
+        // 릴레이 스위치 이벤트 리스너 등록
+        // 전역 함수로 등록하여 인라인 onclick도 작동하도록
+        window.toggleRelay = toggleRelay;
+        
+        // 스크립트가 실행될 때 DOM이 이미 로드되어 있을 수 있으므로 즉시 시도
+        function setupRelaySwitch() {
+            const relaySwitch = document.getElementById('relaySwitch');
+            if (relaySwitch) {
+                // 기존 이벤트 리스너 제거를 위해 클론
+                const newSwitch = relaySwitch.cloneNode(true);
+                relaySwitch.parentNode.replaceChild(newSwitch, relaySwitch);
+                
+                // 새 이벤트 리스너 등록
+                const switchElement = document.getElementById('relaySwitch');
+                switchElement.addEventListener('change', function(e) {
+                    console.log('Relay switch changed via event listener:', e.target.checked);
+                    toggleRelay();
+                });
+                console.log('Relay switch event listener registered successfully');
+            } else {
+                console.warn('Relay switch element not found, retrying...');
+                // 요소가 아직 없으면 잠시 후 다시 시도
+                setTimeout(setupRelaySwitch, 200);
+            }
+        }
+        
+        // 즉시 시도
+        setupRelaySwitch();
+        
+        // DOMContentLoaded도 대비
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupRelaySwitch);
+        }
+        
+        // 모듈 로드 후에도 다시 등록 (동적 로딩 대비)
+        const originalLoadModule = loadModule;
+        loadModule = async function() {
+            await originalLoadModule();
+            // 모듈 로드 후 이벤트 리스너 다시 등록
+            setTimeout(setupRelaySwitch, 100);
+        };
+
+        // 초기 로드
+        loadUserInfo();
+        loadModule(); // loadModule 내부에서 loadSensorData와 loadRelayStatus 호출
+
+        // 주기적 업데이트
+        sensorUpdateInterval = setInterval(loadSensorData, 5000); // 5초마다 센서 데이터 업데이트
+        relayUpdateInterval = setInterval(loadRelayStatus, 10000); // 10초마다 릴레이 상태 업데이트
+
+        // 페이지 언로드 시 인터벌 정리
+        window.addEventListener('beforeunload', () => {
+            if (sensorUpdateInterval) clearInterval(sensorUpdateInterval);
+            if (relayUpdateInterval) clearInterval(relayUpdateInterval);
+        });
+
+        // 세팅 페이지로 이동
+        window.goModuleSettings = function() {
+            const currentModuleId = window.moduleId || moduleId;
+            if (!currentModuleId) {
+                alert('모듈 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            window.location.href = `module-settings.html?id=${encodeURIComponent(currentModuleId)}`;
+        };
+
+        // 수정 모달 관련 함수 (전역 접근 가능하도록)
+        window.showEditModal = function() {
+            console.log('showEditModal called');
+            const currentModule = window.module || module;
+            console.log('Current module:', currentModule);
+            
+            if (!currentModule) {
+                alert('모듈 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+
+            const editName = document.getElementById('editName');
+            const editModuleId = document.getElementById('editModuleId');
+            const editWifiSsid = document.getElementById('editWifiSsid');
+            const editWifiPassword = document.getElementById('editWifiPassword');
+            const editCameraStreamUrl = document.getElementById('editCameraStreamUrl');
+            const hint = document.getElementById('editWifiPasswordHint');
+            const errorDiv = document.getElementById('editError');
+            const editModal = document.getElementById('editModal');
+
+            if (!editName || !editModuleId || !editWifiSsid || !editWifiPassword || !editCameraStreamUrl || !hint || !errorDiv || !editModal) {
+                console.error('모달 요소를 찾을 수 없습니다.');
+                alert('오류가 발생했습니다. 페이지를 새로고침해주세요.');
+                return;
+            }
+
+            // 모달에 기존 값 채우기
+            editName.value = currentModule.name || '';
+            editModuleId.value = currentModule.module_id || '';
+            editWifiSsid.value = currentModule.wifi_ssid || '';
+            editWifiPassword.value = '';
+            editCameraStreamUrl.value = currentModule.camera_stream_url || '';
+
+            // WiFi 비밀번호 힌트 업데이트
+            if (currentModule.wifi_password) {
+                hint.textContent = '비밀번호를 변경하려면 새 비밀번호를 입력하세요. 변경하지 않으려면 비워두세요.';
+            } else {
+                hint.textContent = '아두이노 R4 모듈이 이 WiFi에 자동으로 연결됩니다';
+            }
+
+            // 에러 메시지 숨기기
+            errorDiv.classList.add('hidden');
+            errorDiv.textContent = '';
+
+            // 모달 표시
+            editModal.classList.remove('hidden');
+            console.log('Modal shown');
+        }
+
+        window.hideEditModal = function() {
+            const editModal = document.getElementById('editModal');
+            const errorDiv = document.getElementById('editError');
+            if (editModal) editModal.classList.add('hidden');
+            if (errorDiv) {
+                errorDiv.classList.add('hidden');
+                errorDiv.textContent = '';
+            }
+        };
+
+        window.handleUpdateModule = async function(event) {
+            event.preventDefault();
+            console.log('handleUpdateModule called');
+
+            const currentModuleId = window.moduleId || moduleId;
+            const currentModule = window.module || module;
+
+            const errorDiv = document.getElementById('editError');
+            const submitBtn = document.getElementById('editSubmitBtn');
+            const cancelBtn = document.getElementById('editCancelBtn');
+
+            if (!errorDiv || !submitBtn || !cancelBtn) {
+                console.error('필수 요소를 찾을 수 없습니다.');
+                alert('오류가 발생했습니다. 페이지를 새로고침해주세요.');
+                return;
+            }
+
+            // 에러 메시지 숨기기
+            errorDiv.classList.add('hidden');
+            errorDiv.textContent = '';
+
+            // 버튼 비활성화
+            submitBtn.disabled = true;
+            cancelBtn.disabled = true;
+            submitBtn.textContent = '수정 중...';
+
+            try {
+                console.log('Module ID:', currentModuleId);
+                console.log('Current module:', currentModule);
+
+                if (!currentModuleId) {
+                    throw new Error('모듈 ID를 찾을 수 없습니다.');
+                }
+
+                if (!currentModule) {
+                    throw new Error('모듈 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                }
+
+                const name = document.getElementById('editName').value.trim();
+                const wifiSsid = document.getElementById('editWifiSsid').value.trim();
+                const wifiPassword = document.getElementById('editWifiPassword').value.trim();
+                const cameraStreamUrl = document.getElementById('editCameraStreamUrl').value.trim();
+
+                console.log('Form values:', { name, wifiSsid, wifiPassword: '***', cameraStreamUrl });
+
+                if (!name) {
+                    throw new Error('모듈 이름을 입력해주세요.');
+                }
+
+                // WiFi와 카메라 스트림 URL 중 하나는 있어야 함
+                const hasWifi = wifiSsid && (wifiPassword || currentModule.wifi_password);
+                const hasCamera = cameraStreamUrl;
+                const hadCamera = currentModule.camera_stream_url;
+
+                if (!hasWifi && !hasCamera && !hadCamera) {
+                    throw new Error('WiFi 정보 또는 카메라 스트림 URL 중 하나는 입력해주세요.');
+                }
+
+                // 업데이트 데이터 준비
+                const updateData = {
+                    name: name,
+                };
+
+                // WiFi SSID: 빈 문자열이면 null, 값이 있으면 업데이트
+                if (wifiSsid) {
+                    updateData.wifi_ssid = wifiSsid;
+                } else {
+                    updateData.wifi_ssid = null;
+                }
+
+                // WiFi Password: 빈 문자열이면 undefined (기존 값 유지), 값이 있으면 업데이트
+                if (wifiPassword) {
+                    updateData.wifi_password = wifiPassword;
+                }
+                // 빈 문자열이면 undefined로 보내서 백엔드에서 업데이트하지 않음
+
+                // Camera Stream URL: 값이 있으면 업데이트, 빈 문자열이면 null로 설정
+                // 백엔드에서 undefined는 무시되므로 명시적으로 null을 보내야 함
+                if (cameraStreamUrl && cameraStreamUrl.trim()) {
+                    updateData.camera_stream_url = cameraStreamUrl.trim();
+                } else {
+                    // 빈 문자열이면 null로 설정하여 기존 값 삭제
+                    updateData.camera_stream_url = null;
+                }
+
+                console.log('Update data being sent:', { 
+                    name: updateData.name,
+                    wifi_ssid: updateData.wifi_ssid,
+                    wifi_password: updateData.wifi_password ? '***' : updateData.wifi_password,
+                    camera_stream_url: updateData.camera_stream_url
+                });
+
+                // API 호출
+                console.log('Calling modulesAPI.update...');
+                const response = await modulesAPI.update(currentModuleId, updateData);
+                console.log('Update response:', response);
+
+                if (response.success) {
+                    // 모듈 정보 업데이트
+                    module = response.module;
+                    window.module = module;
+                    console.log('Module updated response:', module);
+                    console.log('Camera stream URL in response:', module.camera_stream_url);
+                    
+                    // 응답에 camera_stream_url이 없으면 다시 조회 (데이터베이스 업데이트 지연 대응)
+                    if (!module.camera_stream_url && updateData.camera_stream_url) {
+                        console.log('camera_stream_url not in response but was sent, fetching module again...');
+                        // 여러 번 재시도 (최대 3번)
+                        for (let i = 0; i < 3; i++) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            const refreshResponse = await modulesAPI.getById(currentModuleId);
+                            if (refreshResponse.success && refreshResponse.module && refreshResponse.module.camera_stream_url) {
+                                module = refreshResponse.module;
+                                window.module = module;
+                                console.log('Refreshed module:', module);
+                                console.log('Camera stream URL after refresh:', module.camera_stream_url);
+                                break;
+                            }
+                            console.log(`Retry ${i + 1}/3: camera_stream_url still not found`);
+                        }
+                    }
+                    
+                    // 여전히 없으면 전송한 값으로 직접 설정 (임시 조치)
+                    if (!module.camera_stream_url && updateData.camera_stream_url) {
+                        console.log('Using sent camera_stream_url as fallback:', updateData.camera_stream_url);
+                        module.camera_stream_url = updateData.camera_stream_url;
+                        window.module = module;
+                    }
+                    
+                    // 모달 닫기
+                    hideEditModal();
+                    
+                    // 모듈 정보 다시 로드하여 UI 전체 업데이트 (카메라 포함)
+                    console.log('Reloading module after update, camera_stream_url:', module.camera_stream_url);
+                    await loadModule();
+                    
+                    // 성공 메시지
+                    alert('모듈 정보가 성공적으로 수정되었습니다.');
+                } else {
+                    throw new Error(response.message || '모듈 수정에 실패했습니다.');
+                }
+            } catch (err) {
+                console.error('모듈 수정 실패:', err);
+                console.error('Error details:', err);
+                
+                let errorMessage = '모듈 수정에 실패했습니다.';
+                if (err.response && err.response.data && err.response.data.message) {
+                    errorMessage = err.response.data.message;
+                } else if (err.message) {
+                    errorMessage = err.message;
+                }
+                
+                errorDiv.textContent = errorMessage;
+                errorDiv.classList.remove('hidden');
+                
+                // 에러가 발생해도 사용자에게 알림
+                console.error('Update error:', errorMessage);
+            } finally {
+                // 버튼 활성화
+                submitBtn.disabled = false;
+                cancelBtn.disabled = false;
+                submitBtn.textContent = '수정';
+            }
+        }
+    </script>
+</body>
+
+</html>
+
+

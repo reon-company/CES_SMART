@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설치 및 셋업 - CES 스마트팜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        * { font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6 flex items-center justify-between">
+            <h1 class="text-2xl font-bold">CES 스마트팜 설치 및 셋업</h1>
+            <a href="index.html" class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">홈으로</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 space-y-6">
+        <section class="bg-white rounded-xl p-6 shadow">
+            <h2 class="text-xl font-semibold mb-3">1) 설치 파일 다운로드</h2>
+            <p class="text-gray-600 mb-4">새 PC에서 아래 설치 파일을 다운로드해 실행하세요.</p>
+            <a id="downloadLink" href="#" class="inline-block px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                CES_SMART_Installer.exe 다운로드
+            </a>
+            <p id="downloadUrlText" class="text-xs text-gray-500 mt-3 break-all"></p>
+        </section>
+
+        <section class="bg-white rounded-xl p-6 shadow">
+            <h2 class="text-xl font-semibold mb-3">2) 설치/초기 실행</h2>
+            <ol class="list-decimal ml-5 text-gray-700 space-y-1">
+                <li>설치 프로그램 실행</li>
+                <li>설치 후 의존성 자동 설치(npm install)</li>
+                <li>backend/.env, frontend/.env.local 값 설정</li>
+                <li>start_all.bat으로 실행</li>
+            </ol>
+        </section>
+
+        <section class="bg-white rounded-xl p-6 shadow">
+            <h2 class="text-xl font-semibold mb-3">3) 서버 검증 스크립트 실행</h2>
+            <p class="text-gray-600 mb-4">백엔드 헬스/설치파일 존재/API 라우트를 자동 점검합니다.</p>
+            <button id="verifyBtn" class="px-5 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                검증 스크립트 실행
+            </button>
+            <div id="verifyResult" class="mt-4 hidden">
+                <pre id="verifyStdout" class="bg-gray-900 text-green-200 p-4 rounded text-xs whitespace-pre-wrap overflow-auto max-h-96"></pre>
+                <pre id="verifyStderr" class="bg-gray-100 text-red-700 p-4 rounded text-xs whitespace-pre-wrap overflow-auto max-h-96 mt-3 hidden"></pre>
+            </div>
+            <p id="verifyError" class="text-red-700 mt-4 hidden"></p>
+        </section>
+    </main>
+
+    <script>
+        // 유지보수 메모:
+        // Setup 페이지는 backend installer/verify 엔드포인트를 직접 사용합니다.
+        // 응답 스키마는 backend/routes/setup.js와 호환되게 안정적으로 유지해야 합니다.
+        function getApiBaseUrl() {
+            const host = (window.location.hostname || '').toLowerCase();
+            if (host === 'localhost' || host === '127.0.0.1') {
+                return 'http://localhost:3000';
+            }
+            return 'https://ces-smart.reonaicoffee.com';
+        }
+
+        const API_BASE_URL = getApiBaseUrl();
+        const installerUrl = API_BASE_URL + '/downloads/CES_SMART_Installer.exe';
+        document.getElementById('downloadLink').href = installerUrl;
+        document.getElementById('downloadUrlText').textContent = '다운로드 경로: ' + installerUrl;
+
+        document.getElementById('verifyBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('verifyBtn');
+            const resultWrap = document.getElementById('verifyResult');
+            const stdoutEl = document.getElementById('verifyStdout');
+            const stderrEl = document.getElementById('verifyStderr');
+            const errorEl = document.getElementById('verifyError');
+
+            btn.disabled = true;
+            btn.textContent = '검증 실행 중...';
+            resultWrap.classList.add('hidden');
+            stderrEl.classList.add('hidden');
+            errorEl.classList.add('hidden');
+            errorEl.textContent = '';
+
+            try {
+                const res = await fetch(API_BASE_URL + '/api/setup/verify');
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.message || '검증 실행 실패');
+                }
+                resultWrap.classList.remove('hidden');
+                stdoutEl.textContent = data.stdout || '(stdout 없음)';
+                if (data.stderr) {
+                    stderrEl.classList.remove('hidden');
+                    stderrEl.textContent = data.stderr;
+                }
+            } catch (err) {
+                errorEl.classList.remove('hidden');
+                errorEl.textContent = err.message || '검증 중 오류가 발생했습니다.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '검증 스크립트 실행';
+            }
+        });
+    </script>
+</body>
+</html>

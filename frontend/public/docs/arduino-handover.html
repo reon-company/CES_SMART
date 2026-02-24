@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arduino(R4) 핸드오버 가이드 - DOCS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* doc-common: TOC */
+    .doc-toc a.active { font-weight: 600; color: #4f46e5; }
+    .doc-toc a { color: #64748b; }
+    .doc-toc a:hover { color: #334155; }
+    .doc-toc .toc-h2 { padding-left: 0; }
+    .doc-toc .toc-h3 { padding-left: 1rem; font-size: 0.9em; }
+    .doc-content h1, .doc-content h2, .doc-content h3 { scroll-margin-top: 6rem; }
+    .doc-content .prose { max-width: none; }
+
+    /* doc-common: body gradient */
+    .doc-body-gradient {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+      min-height: 100vh;
+    }
+
+    /* doc-common: article card/glass */
+    .doc-article-card {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 4px 24px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06);
+      border: 1px solid rgba(226,232,240,0.9);
+    }
+
+    /* doc-common: headings */
+    .doc-content h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+    .doc-content h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 1.5rem;
+    }
+    .doc-content h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 1rem;
+    }
+
+    /* doc-common: section-card */
+    .section-card {
+      background: rgba(248,250,252,0.6);
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .section-card:last-child { margin-bottom: 0; }
+    .section-card > h2:first-child { margin-top: 0; }
+
+    /* doc-common: badges */
+    .doc-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0 1.25rem;
+    }
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border-radius: 9999px;
+      background: #e0e7ff;
+      color: #4338ca;
+    }
+    .doc-badge.doc-badge-guide { background: #ddd6fe; color: #5b21b6; }
+    .doc-badge.doc-badge-date { background: #e2e8f0; color: #475569; font-size: 0.7rem; }
+
+    /* doc-common: table */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      margin: 1rem 0;
+    }
+    .doc-content table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .doc-content table th {
+      background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+      font-weight: 600;
+      color: #334155;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    .doc-content table th:first-child { border-radius: 10px 0 0 0; }
+    .doc-content table th:last-child { border-radius: 0 10px 0 0; }
+    .doc-content table td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .doc-content table tr:hover td { background: #f8fafc; }
+    .doc-content table tbody tr:last-child td:first-child { border-radius: 0 0 0 10px; }
+    .doc-content table tbody tr:last-child td:last-child { border-radius: 0 0 10px 0; }
+
+    /* doc-common: code/pre */
+    .doc-content code {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 0.2em 0.45em;
+      border-radius: 6px;
+      font-size: 0.875em;
+    }
+    .doc-content pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      border: 1px solid #334155;
+    }
+    .doc-content pre code { background: none; padding: 0; }
+
+    /* doc-common: blockquote */
+    .doc-content blockquote {
+      border-left: 4px solid #6366f1;
+      background: #f8fafc;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      border-radius: 0 8px 8px 0;
+      color: #475569;
+    }
+
+    /* doc-common: checklist li */
+    .doc-content ul li:has(input[type="checkbox"]) {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+      border-radius: 6px;
+      padding-left: 0.5rem;
+    }
+    .doc-content ul li:has(input[type="checkbox"]):hover { background: rgba(241,245,249,0.8); }
+    .doc-content ul li:has(input[type="checkbox"]) input {
+      margin-top: 0.2rem;
+      accent-color: #4f46e5;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="doc-body-gradient min-h-screen">
+  <header class="sticky top-0 z-50 bg-slate-800 text-white shadow-lg">
+    <div class="container mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <a href="../index.html" class="px-3 py-1.5 bg-slate-600 rounded-lg hover:bg-slate-500 transition">홈</a>
+        <a href="../docs.html" class="px-3 py-1.5 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition font-medium">문서센터</a>
+      </div>
+      <h1 class="text-lg font-bold text-white">Arduino(R4) 핸드오버 가이드</h1>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <div class="mb-4">
+      <label for="inpage-search" class="block text-sm font-medium text-slate-600 mb-2">문서 내 검색</label>
+      <input type="text" id="inpage-search" placeholder="현재 문서에서 검색..." class="w-full max-w-md px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm" />
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6">
+      <aside class="lg:w-56 flex-shrink-0">
+        <div class="lg:sticky lg:top-24">
+          <button type="button" id="toc-toggle" class="lg:hidden w-full px-4 py-2 bg-white rounded-lg border border-slate-200 text-left font-medium text-slate-700">목차 펼치기/접기</button>
+          <nav id="doc-toc" class="doc-toc mt-2 hidden lg:block bg-white rounded-lg p-4 border border-slate-200 text-sm"></nav>
+        </div>
+      </aside>
+      <article class="flex-1 min-w-0 doc-article-card rounded-xl p-6 prose prose-slate max-w-none doc-content">
+        <div id="md-output"></div>
+      </article>
+    </div>
+  </main>
+  <script type="text/template" id="md-content"># ARDUINO(R4) 핸드오버 가이드
+
+---
+
+## 대상 독자 / 목표
+
+| 항목 | 내용 |
+|------|------|
+| **대상 독자** | 하드웨어/임베디드 인수 담당자, 현장 배포 담당자 |
+| **목표** | Arduino R4 기반 센서/릴레이 모듈의 업로드, WiFi 설정, 서버 연동을 1일 내 수행 가능하도록 함 |
+
+---
+
+## 사전 준비물
+
+- [ ] Arduino IDE 2.x 또는 PlatformIO
+- [ ] Arduino UNO R4 WiFi 보드
+- [ ] USB 케이블 (데이터 통신 지원)
+- [ ] 라이브러리: ArduinoJson, DHT sensor library, Adafruit Unified Sensor
+- [ ] 서버 API URL (예: `http://your-server:3000`)
+- [ ] DB에 등록된 `module_id` (모듈 ID)
+
+---
+
+## 1. 역할
+- 센서(현재 DHT11 중심) 읽기
+- 릴레이 상태 반영 및 서버 제어 동기화
+- 주기적으로 센서/릴레이 상태를 백엔드 API로 전송
+
+## 2. 핵심 파일
+- `arduino-r4/CES_SmartFarm/CES_SmartFarm.ino`: 부팅/메인 루프/WiFi 재연결 상태기계
+- `arduino-r4/CES_SmartFarm/api_client.h`: 서버 API 통신
+- `arduino-r4/CES_SmartFarm/wifi_config.h`: AP 설정 포털/EEPROM 저장
+- `arduino-r4/CES_SmartFarm/config.h`: 모듈 ID, 서버 URL, 주기, 핀 정의
+
+## 3. 아두이노 배선 가이드 (현장 설치용)
+
+### 3-1. 기본 배선 원칙
+- 모든 센서/릴레이는 **공통 GND**를 공유해야 합니다.
+- 전원은 보드/모듈 스펙에 맞춰 공급하고, 릴레이 모듈의 최대 전류를 확인하세요.
+- 배선 변경 후에는 전원을 다시 인가하고 시리얼 로그로 초기화를 확인하세요.
+
+### 3-2. 기본 핀 매핑 (현재 펌웨어 기준)
+
+| 기능 | Arduino UNO R4 WiFi 핀 | 연결 대상 |
+|------|------------------------|-----------|
+| DHT11 데이터 | `D2` | DHT11 `DATA` |
+| 릴레이 제어 | `D3` | 릴레이 모듈 `IN` |
+| 전원 | `5V` / `3.3V` (모듈 스펙 확인) | DHT11 `VCC`, 릴레이 `VCC` |
+| 공통 접지 | `GND` | DHT11 `GND`, 릴레이 `GND` |
+
+> 핀 번호는 `arduino-r4/CES_SmartFarm/config.h`의 `DHT11_PIN`, `RELAY_PIN` 값을 기준으로 합니다.
+> 코드에서 핀을 바꾸면 배선도 반드시 함께 수정해야 합니다.
+
+### 3-3. 릴레이 실제 부하 배선(주의)
+- 릴레이 출력단(COM/NO/NC)은 제어 대상 장비(펌프/팬 등)의 전압/전류 사양에 맞게 연결하세요.
+- 고전압(AC) 배선은 절연/안전 규정을 준수하고, 가능하면 전기 작업 숙련자가 처리해야 합니다.
+- 초기 테스트는 저전압 부하(테스트 LED/소형 부하)로 먼저 검증하세요.
+
+## 4. 동작 흐름
+1. 부팅 후 시리얼/센서/릴레이 초기화
+2. EEPROM WiFi 설정 로드 또는 AP 설정 포털 진입
+3. 연결 성공 시 주기 전송(센서), 주기 폴링(릴레이 상태)
+4. WiFi 끊김 시 비차단 상태기계로 재연결 시도
+
+## 5. 이관 체크포인트
+- `MODULE_ID`가 서버 등록 모듈과 일치하는지 확인
+- `API_BASE_URL`이 실제 운영 주소와 일치하는지 확인
+- 보드/포트/라이브러리 설치 상태(ArduinoJson, DHT 등) 확인
+- 시리얼 로그에서 초기화/연결/전송 성공 여부 확인
+
+## 6. 장애 대응
+- \"Connection to server failed\": 방화벽/도메인/API URL 확인
+- 모듈 미표시: DB `user_id` 소유권/모듈 ID 불일치 확인
+- 시리얼 미출력: Baud rate 및 보드 포트 재선택
+
+---
+
+## 7. 단계별 절차
+
+### Step 1: Arduino IDE 환경 설정
+1. 보드 매니저에서 "Arduino UNO R4 WiFi" 설치
+2. 스케치 → 라이브러리 포함 → 라이브러리 관리에서 설치:
+   - `ArduinoJson` (6.x)
+   - `DHT sensor library`
+   - `Adafruit Unified Sensor`
+
+### Step 2: config.h 수정
+```cpp
+// arduino-r4/CES_SmartFarm/config.h
+#define MODULE_ID       "your-module-id"   // DB modules.id와 동일
+#define API_BASE_URL   "http://192.168.1.100:3000"  // 실제 서버 URL
+#define SENSOR_INTERVAL_MS  30000   // 센서 전송 주기(ms)
+```
+
+### Step 3: 업로드 및 시리얼 모니터
+1. 도구 → 보드 → Arduino UNO R4 WiFi
+2. 도구 → 포트 → 해당 COM 포트 선택
+3. 업로드 버튼 클릭
+4. 도구 → 시리얼 모니터 (115200 baud)
+
+### Step 4: WiFi 초기 설정 (최초 1회)
+- EEPROM에 저장된 WiFi가 없으면 AP 모드 진입
+- 스마트폰/PC에서 `CES_SmartFarm_AP` SSID로 접속 → `http://192.168.4.1` 또는 시리얼 안내에 따라 설정
+
+---
+
+## 8. 검증 방법 (정상/비정상 기준)
+
+| 항목 | 정상 | 비정상 |
+|------|------|--------|
+| 시리얼 부팅 로그 | `WiFi connected`, `IP: xxx.xxx.xxx.xxx` | `WiFi connection failed` |
+| 센서 전송 | `POST /api/sensors/data` 200 로그 | `Connection to server failed` |
+| 릴레이 폴링 | `GET /api/actuators/status` 200 | 401, 404 |
+| 대시보드 모듈 표시 | 해당 모듈 카드에 센서 데이터 표시 | 빈 카드, "연결 없음" |
+
+---
+
+## 9. 자주 발생하는 문제와 해결
+
+| 현상 | 원인 | 해결 |
+|------|------|------|
+| Connection to server failed | API_BASE_URL 오타, 방화벽, 서버 미가동 | URL 확인, `curl`로 서버 도달 테스트 |
+| 모듈 미표시 | MODULE_ID 불일치 | DB `modules` 테이블 `id`와 동일하게 설정 |
+| 시리얼 미출력 | 포트/Baud 잘못 선택 | 115200, 올바른 COM 포트 재선택 |
+| DHT 읽기 실패 | 핀 연결, 센서 고장 | `camera_pins.h`/`config.h` 핀 번호 확인 |
+| AP 모드만 반복 | WiFi SSID/비밀번호 오류 | `/wifi/clear` 후 재설정 또는 시리얼 명령으로 초기화 |
+</script>
+  <script>
+    (function(){
+      var t = document.getElementById('md-content');
+      var out = document.getElementById('md-output');
+      var tocEl = document.getElementById('doc-toc');
+      var tocToggle = document.getElementById('toc-toggle');
+      var searchIn = document.getElementById('inpage-search');
+
+      function slug(txt) {
+        return txt.replace(/\s+/g, '-').replace(/[^\w\u3131-\u318E\uAC00-\uD7A3-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'h';
+      }
+
+      if (t && out && typeof marked !== 'undefined') {
+        out.innerHTML = marked.parse(t.textContent);
+      }
+
+      /* doc-postprocess: badges, section-card, table-wrap, external links */
+      if (out) {
+        var h1 = out.querySelector('h1');
+        if (h1) {
+          var badges = document.createElement('div');
+          badges.className = 'doc-badges';
+          var h1Text = (h1.textContent || '').toLowerCase();
+          var typeLabel = (h1Text.indexOf('체크리스트') >= 0 || h1Text.indexOf('납품') >= 0) ? '납품 문서' : '실무 가이드';
+          badges.innerHTML = '<span class="doc-badge">' + typeLabel + '</span><span class="doc-badge doc-badge-guide">가이드</span><span class="doc-badge doc-badge-date">최종 업데이트: ' + new Date().toLocaleDateString('ko-KR') + '</span>';
+          h1.parentNode.insertBefore(badges, h1.nextSibling);
+        }
+        out.querySelectorAll('table').forEach(function(tbl) {
+          if (!tbl.closest('.table-wrap')) {
+            var wrap = document.createElement('div');
+            wrap.className = 'table-wrap';
+            tbl.parentNode.insertBefore(wrap, tbl);
+            wrap.appendChild(tbl);
+          }
+        });
+        out.querySelectorAll('a[href^="http"]').forEach(function(a) {
+          if (!a.href || a.getAttribute('target')) return;
+          var loc = window.location;
+          try {
+            var url = new URL(a.href);
+            if (url.origin !== loc.origin) {
+              a.setAttribute('target', '_blank');
+              a.setAttribute('rel', 'noopener noreferrer');
+            }
+          } catch (e) {}
+        });
+        var h2List = out.querySelectorAll('h2');
+        h2List.forEach(function(h2) {
+          var section = document.createElement('section');
+          section.className = 'section-card';
+          var toMove = [h2];
+          var next = h2.nextElementSibling;
+          while (next && next.tagName !== 'H2') {
+            toMove.push(next);
+            next = next.nextElementSibling;
+          }
+          h2.parentNode.insertBefore(section, h2);
+          toMove.forEach(function(n) { section.appendChild(n); });
+        });
+      }
+
+      var headings = out ? out.querySelectorAll('h1, h2, h3') : [];
+      var used = {};
+      headings.forEach(function(h, i) {
+        var s = slug(h.textContent) || ('h' + i);
+        if (used[s]) used[s]++; else used[s] = 0;
+        var id = used[s] ? s + '-' + used[s] : s;
+        h.id = id;
+      });
+
+      if (tocEl) {
+        var html = '';
+        headings.forEach(function(h) {
+          var cls = 'block py-1 ' + (h.tagName === 'H2' ? 'toc-h2' : 'toc-h3');
+          html += '<a href="#' + h.id + '" class="' + cls + '">' + h.textContent + '</a>';
+        });
+        tocEl.innerHTML = html || '<span class="text-slate-500">목차 없음</span>';
+        tocEl.classList.remove('hidden');
+      }
+
+      if (tocToggle) {
+        tocToggle.addEventListener('click', function() {
+          tocEl.classList.toggle('hidden');
+          tocToggle.textContent = tocEl.classList.contains('hidden') ? '목차 펼치기/접기' : '목차 접기';
+        });
+      }
+
+      if (searchIn && out) {
+        function unhighlight() {
+          out.querySelectorAll('mark.hl').forEach(function(m) {
+            m.outerHTML = m.textContent;
+          });
+        }
+        function highlight(q) {
+          unhighlight();
+          if (!q) return;
+          var esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var re = new RegExp('(' + esc + ')', 'gi');
+          out.querySelectorAll('p, li, h1, h2, h3, td, th').forEach(function(el) {
+            if (el.querySelector('code, pre')) return;
+            var html = el.innerHTML;
+            var neu = html.replace(re, '<mark class="hl bg-yellow-200">$1</mark>');
+            if (neu !== html) el.innerHTML = neu;
+          });
+          var first = out.querySelector('mark.hl');
+          if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        searchIn.addEventListener('input', function() { highlight(searchIn.value.trim()); });
+      }
+    })();
+  </script>
+</body>
+</html>

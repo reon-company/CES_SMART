@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backend 핸드오버 가이드 - DOCS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* doc-common: TOC */
+    .doc-toc a.active { font-weight: 600; color: #4f46e5; }
+    .doc-toc a { color: #64748b; }
+    .doc-toc a:hover { color: #334155; }
+    .doc-toc .toc-h2 { padding-left: 0; }
+    .doc-toc .toc-h3 { padding-left: 1rem; font-size: 0.9em; }
+    .doc-content h1, .doc-content h2, .doc-content h3 { scroll-margin-top: 6rem; }
+    .doc-content .prose { max-width: none; }
+
+    /* doc-common: body gradient */
+    .doc-body-gradient {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+      min-height: 100vh;
+    }
+
+    /* doc-common: article card/glass */
+    .doc-article-card {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 4px 24px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06);
+      border: 1px solid rgba(226,232,240,0.9);
+    }
+
+    /* doc-common: headings */
+    .doc-content h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+    }
+    .doc-content h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 1.5rem;
+    }
+    .doc-content h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 1rem;
+    }
+
+    /* doc-common: section-card */
+    .section-card {
+      background: rgba(248,250,252,0.6);
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .section-card:last-child { margin-bottom: 0; }
+    .section-card > h2:first-child { margin-top: 0; }
+
+    /* doc-common: badges */
+    .doc-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0 1.25rem;
+    }
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border-radius: 9999px;
+      background: #e0e7ff;
+      color: #4338ca;
+    }
+    .doc-badge.doc-badge-guide { background: #ddd6fe; color: #5b21b6; }
+    .doc-badge.doc-badge-date { background: #e2e8f0; color: #475569; font-size: 0.7rem; }
+
+    /* doc-common: table */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      margin: 1rem 0;
+    }
+    .doc-content table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .doc-content table th {
+      background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+      font-weight: 600;
+      color: #334155;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    .doc-content table th:first-child { border-radius: 10px 0 0 0; }
+    .doc-content table th:last-child { border-radius: 0 10px 0 0; }
+    .doc-content table td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .doc-content table tr:hover td { background: #f8fafc; }
+    .doc-content table tbody tr:last-child td:first-child { border-radius: 0 0 0 10px; }
+    .doc-content table tbody tr:last-child td:last-child { border-radius: 0 0 10px 0; }
+
+    /* doc-common: code/pre */
+    .doc-content code {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 0.2em 0.45em;
+      border-radius: 6px;
+      font-size: 0.875em;
+    }
+    .doc-content pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      border: 1px solid #334155;
+    }
+    .doc-content pre code { background: none; padding: 0; }
+
+    /* doc-common: blockquote */
+    .doc-content blockquote {
+      border-left: 4px solid #6366f1;
+      background: #f8fafc;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      border-radius: 0 8px 8px 0;
+      color: #475569;
+    }
+
+    /* doc-common: checklist li */
+    .doc-content ul li:has(input[type="checkbox"]) {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+      border-radius: 6px;
+      padding-left: 0.5rem;
+    }
+    .doc-content ul li:has(input[type="checkbox"]):hover { background: rgba(241,245,249,0.8); }
+    .doc-content ul li:has(input[type="checkbox"]) input {
+      margin-top: 0.2rem;
+      accent-color: #4f46e5;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="doc-body-gradient min-h-screen">
+  <header class="sticky top-0 z-50 bg-slate-800 text-white shadow-lg">
+    <div class="container mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <a href="../index.html" class="px-3 py-1.5 bg-slate-600 rounded-lg hover:bg-slate-500 transition">홈</a>
+        <a href="../docs.html" class="px-3 py-1.5 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition font-medium">문서센터</a>
+      </div>
+      <h1 class="text-lg font-bold text-white">Backend 핸드오버 가이드</h1>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6">
+    <div class="mb-4">
+      <label for="inpage-search" class="block text-sm font-medium text-slate-600 mb-2">문서 내 검색</label>
+      <input type="text" id="inpage-search" placeholder="현재 문서에서 검색..." class="w-full max-w-md px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm" />
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6">
+      <aside class="lg:w-56 flex-shrink-0">
+        <div class="lg:sticky lg:top-24">
+          <button type="button" id="toc-toggle" class="lg:hidden w-full px-4 py-2 bg-white rounded-lg border border-slate-200 text-left font-medium text-slate-700">목차 펼치기/접기</button>
+          <nav id="doc-toc" class="doc-toc mt-2 hidden lg:block bg-white rounded-lg p-4 border border-slate-200 text-sm"></nav>
+        </div>
+      </aside>
+      <article class="flex-1 min-w-0 doc-article-card rounded-xl p-6 prose prose-slate max-w-none doc-content">
+        <div id="md-output"></div>
+      </article>
+    </div>
+  </main>
+  <script type="text/template" id="md-content"># BACKEND 핸드오버 가이드
+
+---
+
+## 대상 독자 / 목표
+
+| 항목 | 내용 |
+|------|------|
+| **대상 독자** | 백엔드 인수 담당자, API 유지보수 개발자 |
+| **목표** | Node.js/Express 백엔드 구조를 이해하고, 로컬 실행·배포·트러블슈팅을 1일 내 수행 가능하도록 함 |
+
+---
+
+## 사전 준비물
+
+- [ ] Node.js 18+ (권장 LTS)
+- [ ] MySQL 8.0+ (로컬 또는 원격)
+- [ ] `backend/.env.example` 기반 `.env` 파일
+- [ ] PM2 (운영 배포 시): `npm install -g pm2`
+
+---
+
+## 1. 책임 범위
+- 인증(JWT), 모듈 CRUD, 센서 수신/조회, 액추에이터 제어, 카메라 프록시, 설치 검증 API 제공
+
+## 2. 핵심 파일
+- `backend/server.js`: Express 진입점, CORS, 라우트 마운트, 예외/종료 처리
+- `backend/routes/auth.js`: 로그인/회원가입/사용자 조회
+- `backend/routes/modules.js`: 모듈 생성/수정/삭제, WiFi config 조회
+- `backend/routes/sensors.js`: 센서 데이터 수신/히스토리
+- `backend/routes/actuators.js`: 릴레이/액추에이터 상태 조회/제어
+- `backend/routes/camera.js`: 스트림/헬스/WiFi 설정 프록시
+- `backend/routes/setup.js`: 설치파일 메타, 서버 검증 스크립트 실행
+- `backend/models/*.js`: DB 접근 계층
+- `backend/config/database.js`: DB 연결
+
+## 3. 실행/배포
+- 로컬
+  - `cd backend && npm install && npm start`
+- 운영
+  - PM2 기반 실행: `pm2 start ecosystem.config.js`
+  - 상태 확인: `pm2 status`, `pm2 logs ces-smartfarm`
+
+## 4. 환경 변수 핵심
+- `PORT`, `NODE_ENV`
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `JWT_SECRET`, `JWT_EXPIRE`
+- `CORS_ORIGIN`
+
+## 5. 카메라 프록시 동작
+- `GET /api/camera/:moduleId/health`: 서버에서 카메라 URL 도달성 검사
+- `GET /api/camera/:moduleId/stream`: MJPEG 프록시
+- `POST /api/camera/:moduleId/wifi`: ESP32-CAM `/wifi/set` 프록시 호출
+- 중요: 프론트는 카메라 URL을 직접 쓰지 않고 위 스트림 API를 사용
+
+## 6. 운영 트러블슈팅
+- 401 반복: 토큰 만료/서명키 불일치 여부 점검
+- 카메라 504: 서버-ESP32 네트워크(Tailscale/포트포워딩) 점검
+- CORS 차단: `server.js`의 허용 origin과 실제 origin 비교
+
+## 7. 변경 시 영향도
+- `modules.js`/`Module.js` 수정 시: 프론트 모듈 세팅, Arduino 모듈 ID 매칭 영향
+- `camera.js` 수정 시: 모바일/외부 스트리밍 전체 영향
+- `server.js` CORS 수정 시: Vercel/정적 페이지/로컬 테스트 동시 영향
+
+---
+
+## 8. 단계별 절차
+
+### Step 1: 환경 파일 생성
+```bash
+cd c:\KKJ\CES_SMART-main\CES_SMART-main\backend
+copy .env.example .env
+```
+- `.env`에서 `DB_*`, `JWT_SECRET`, `CORS_ORIGIN` 반드시 수정
+
+### Step 2: DB 스키마 적용
+```bash
+# MySQL 접속 후
+mysql -u root -p ces_smartfarm < database/schema.sql
+```
+
+### Step 3: 의존성 설치 및 실행
+```bash
+npm install
+npm start
+```
+- 로컬 개발 시: `npm run dev` (nodemon)
+
+### Step 4: PM2 운영 배포
+```bash
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
+```
+- 로그 경로: `backend/logs/out.log`, `backend/logs/err.log`
+
+---
+
+## 9. 검증 방법 (정상/비정상 기준)
+
+| 항목 | 정상 | 비정상 |
+|------|------|--------|
+| 서버 기동 | `Server running on port 3000` | ECONNREFUSED, 포트 충돌 |
+| `GET /api/health` | 200 `{"status":"ok"}` | 500, DB 연결 실패 |
+| `POST /api/auth/login` | 200 + `token` | 401 인증 실패, 500 |
+| `GET /api/modules` (Bearer) | 200 + JSON 배열 | 401 토큰 만료/유효하지 않음 |
+| `GET /api/camera/:id/health` | 200 카메라 도달 | 502/504 프록시 실패 |
+
+---
+
+## 10. 자주 발생하는 문제와 해결
+
+| 현상 | 원인 | 해결 |
+|------|------|------|
+| 401 반복 | JWT_SECRET 불일치, 토큰 만료 | `.env` JWT_SECRET 통일, 7d 기준 확인 |
+| 카메라 504 | 서버→ESP32 네트워크 미연결 | Tailscale/portproxy, `curl http://카메라IP:81/stream` 확인 |
+| CORS 차단 | Origin 미허용 | `CORS_ORIGIN` 콤마 구분 목록에 추가 |
+| DB connection refused | MySQL 미가동/포트/계정 오류 | `net start mysql`, `DB_HOST`/`DB_PORT` 확인 |
+| PM2 재시작 루프 | 메모리/예외 한계 도달 | `pm2 logs`로 err.log 원인 확인, `max_restarts` 조정 |
+</script>
+  <script>
+    (function(){
+      var t = document.getElementById('md-content');
+      var out = document.getElementById('md-output');
+      var tocEl = document.getElementById('doc-toc');
+      var tocToggle = document.getElementById('toc-toggle');
+      var searchIn = document.getElementById('inpage-search');
+
+      function slug(txt) {
+        return txt.replace(/\s+/g, '-').replace(/[^\w\u3131-\u318E\uAC00-\uD7A3-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'h';
+      }
+
+      if (t && out && typeof marked !== 'undefined') {
+        out.innerHTML = marked.parse(t.textContent);
+      }
+
+      /* doc-postprocess: badges, section-card, table-wrap, external links */
+      if (out) {
+        var h1 = out.querySelector('h1');
+        if (h1) {
+          var badges = document.createElement('div');
+          badges.className = 'doc-badges';
+          var h1Text = (h1.textContent || '').toLowerCase();
+          var typeLabel = (h1Text.indexOf('체크리스트') >= 0 || h1Text.indexOf('납품') >= 0) ? '납품 문서' : '실무 가이드';
+          badges.innerHTML = '<span class="doc-badge">' + typeLabel + '</span><span class="doc-badge doc-badge-guide">가이드</span><span class="doc-badge doc-badge-date">최종 업데이트: ' + new Date().toLocaleDateString('ko-KR') + '</span>';
+          h1.parentNode.insertBefore(badges, h1.nextSibling);
+        }
+        out.querySelectorAll('table').forEach(function(tbl) {
+          if (!tbl.closest('.table-wrap')) {
+            var wrap = document.createElement('div');
+            wrap.className = 'table-wrap';
+            tbl.parentNode.insertBefore(wrap, tbl);
+            wrap.appendChild(tbl);
+          }
+        });
+        out.querySelectorAll('a[href^="http"]').forEach(function(a) {
+          if (!a.href || a.getAttribute('target')) return;
+          var loc = window.location;
+          try {
+            var url = new URL(a.href);
+            if (url.origin !== loc.origin) {
+              a.setAttribute('target', '_blank');
+              a.setAttribute('rel', 'noopener noreferrer');
+            }
+          } catch (e) {}
+        });
+        var h2List = out.querySelectorAll('h2');
+        h2List.forEach(function(h2) {
+          var section = document.createElement('section');
+          section.className = 'section-card';
+          var toMove = [h2];
+          var next = h2.nextElementSibling;
+          while (next && next.tagName !== 'H2') {
+            toMove.push(next);
+            next = next.nextElementSibling;
+          }
+          h2.parentNode.insertBefore(section, h2);
+          toMove.forEach(function(n) { section.appendChild(n); });
+        });
+      }
+
+      var headings = out ? out.querySelectorAll('h1, h2, h3') : [];
+      var used = {};
+      headings.forEach(function(h, i) {
+        var s = slug(h.textContent) || ('h' + i);
+        if (used[s]) used[s]++; else used[s] = 0;
+        var id = used[s] ? s + '-' + used[s] : s;
+        h.id = id;
+      });
+
+      if (tocEl) {
+        var html = '';
+        headings.forEach(function(h) {
+          var cls = 'block py-1 ' + (h.tagName === 'H2' ? 'toc-h2' : 'toc-h3');
+          html += '<a href="#' + h.id + '" class="' + cls + '">' + h.textContent + '</a>';
+        });
+        tocEl.innerHTML = html || '<span class="text-slate-500">목차 없음</span>';
+        tocEl.classList.remove('hidden');
+      }
+
+      if (tocToggle) {
+        tocToggle.addEventListener('click', function() {
+          tocEl.classList.toggle('hidden');
+          tocToggle.textContent = tocEl.classList.contains('hidden') ? '목차 펼치기/접기' : '목차 접기';
+        });
+      }
+
+      if (searchIn && out) {
+        function unhighlight() {
+          out.querySelectorAll('mark.hl').forEach(function(m) {
+            m.outerHTML = m.textContent;
+          });
+        }
+        function highlight(q) {
+          unhighlight();
+          if (!q) return;
+          var esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var re = new RegExp('(' + esc + ')', 'gi');
+          out.querySelectorAll('p, li, h1, h2, h3, td, th').forEach(function(el) {
+            if (el.querySelector('code, pre')) return;
+            var html = el.innerHTML;
+            var neu = html.replace(re, '<mark class="hl bg-yellow-200">$1</mark>');
+            if (neu !== html) el.innerHTML = neu;
+          });
+          var first = out.querySelector('mark.hl');
+          if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        searchIn.addEventListener('input', function() { highlight(searchIn.value.trim()); });
+      }
+    })();
+  </script>
+</body>
+</html>

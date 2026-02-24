@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모듈 세팅 - CES 스마트팜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <a id="backToModuleBtn" href="dashboard.html" class="text-white hover:text-gray-200 text-2xl">←</a>
+                    <div>
+                        <h1 class="text-2xl font-bold">모듈 세팅</h1>
+                        <p id="moduleSummary" class="text-sm text-indigo-100">로딩 중...</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="serial-monitor.html" class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">시리얼 모니터</a>
+                    <span id="userEmail" class="text-sm">로딩 중...</span>
+                    <button onclick="auth.logout()"
+                        class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">
+                        로그아웃
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 space-y-6">
+        <div id="globalAlert" class="hidden rounded-lg border px-4 py-3 text-sm"></div>
+
+        <!-- 1) Arduino WiFi -->
+        <section class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+            <div class="mb-4">
+                <h2 class="text-xl font-bold text-gray-900">1) 아두이노 WiFi 세팅</h2>
+                <p class="text-sm text-gray-600 mt-1">아두이노 R4가 자동으로 접속할 WiFi 정보를 저장합니다.</p>
+            </div>
+            <form id="arduinoWifiForm" class="space-y-4">
+                <div>
+                    <label for="arduinoWifiSsid" class="block text-sm font-semibold text-gray-700 mb-1">WiFi 이름 (SSID)</label>
+                    <input id="arduinoWifiSsid" type="text" class="w-full border rounded-lg px-3 py-2" placeholder="예: SK_WiFiGIGA91A3_2.4G" />
+                </div>
+                <div>
+                    <label for="arduinoWifiPassword" class="block text-sm font-semibold text-gray-700 mb-1">WiFi 비밀번호</label>
+                    <input id="arduinoWifiPassword" type="password" class="w-full border rounded-lg px-3 py-2" placeholder="변경할 때만 입력" />
+                    <p class="text-xs text-gray-500 mt-1">비워두면 기존 비밀번호를 유지합니다.</p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <p id="arduinoWifiStatus" class="text-sm text-gray-500"></p>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">세팅 저장</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 2) Arduino module id -->
+        <section class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+            <div class="mb-4">
+                <h2 class="text-xl font-bold text-gray-900">2) 아두이노 모듈 아이디 설정</h2>
+                <p class="text-sm text-gray-600 mt-1">서버 모듈 ID를 변경합니다. 아두이노 코드의 MODULE_ID와 동일하게 맞춰주세요.</p>
+            </div>
+            <form id="moduleIdForm" class="space-y-4">
+                <div>
+                    <label for="moduleIdInput" class="block text-sm font-semibold text-gray-700 mb-1">모듈 ID</label>
+                    <input id="moduleIdInput" type="text" class="w-full border rounded-lg px-3 py-2 font-mono" placeholder="예: MODULE_001" />
+                </div>
+                <div class="flex items-center justify-between">
+                    <p id="moduleIdStatus" class="text-sm text-gray-500"></p>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">세팅 저장</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 3) ESP32-CAM WiFi -->
+        <section class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+            <div class="mb-4">
+                <h2 class="text-xl font-bold text-gray-900">3) ESP32-CAM WiFi 세팅</h2>
+                <p class="text-sm text-gray-600 mt-1">서버 프록시를 통해 ESP32-CAM의 `/wifi/set`을 호출합니다.</p>
+            </div>
+            <form id="espWifiForm" class="space-y-4">
+                <div class="flex items-center space-x-2">
+                    <input id="syncWifiSsid" type="checkbox" class="rounded border-gray-300" checked />
+                    <label for="syncWifiSsid" class="text-sm text-gray-700">아두이노 WiFi SSID와 동일하게 자동 입력</label>
+                </div>
+                <div>
+                    <label for="espWifiSsid" class="block text-sm font-semibold text-gray-700 mb-1">ESP32-CAM WiFi SSID</label>
+                    <input id="espWifiSsid" type="text" class="w-full border rounded-lg px-3 py-2" placeholder="ESP32-CAM이 연결할 SSID" />
+                </div>
+                <div>
+                    <label for="espWifiPassword" class="block text-sm font-semibold text-gray-700 mb-1">ESP32-CAM WiFi 비밀번호</label>
+                    <input id="espWifiPassword" type="password" class="w-full border rounded-lg px-3 py-2" placeholder="비밀번호 (없으면 비워두기)" />
+                </div>
+                <div class="flex items-center justify-between">
+                    <p id="espWifiStatus" class="text-sm text-gray-500"></p>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold">ESP32-CAM 적용</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 4) ESP32 stream -->
+        <section class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+            <div class="mb-4">
+                <h2 class="text-xl font-bold text-gray-900">4) ESP32-CAM 스트림 세팅</h2>
+                <p class="text-sm text-gray-600 mt-1">예: <code class="bg-gray-100 px-1 rounded">http://100.69.169.126:81/stream</code></p>
+            </div>
+            <form id="cameraStreamForm" class="space-y-4">
+                <div>
+                    <label for="cameraStreamInput" class="block text-sm font-semibold text-gray-700 mb-1">카메라 스트림 URL</label>
+                    <input id="cameraStreamInput" type="url" class="w-full border rounded-lg px-3 py-2" placeholder="http://192.168.1.13:81/stream" />
+                    <p class="text-xs text-gray-500 mt-1">비우고 저장하면 카메라 URL을 제거합니다.</p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <p id="cameraStreamStatus" class="text-sm text-gray-500"></p>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">세팅 저장</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // 유지보수 메모:
+        // 이 페이지는 4개 운영 설정을 한 곳에 모아 관리합니다.
+        // Arduino WiFi, module_id, ESP32-CAM WiFi 프록시 적용, camera stream URL.
+        // payload 키는 backend routes/modules, routes/camera 계약과 반드시 맞춰야 합니다.
+        if (!auth.isAuthenticated()) {
+            window.location.href = 'login.html';
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const moduleDbId = params.get('id');
+        let currentModule = null;
+
+        if (!moduleDbId) {
+            alert('모듈 ID가 없습니다.');
+            window.location.href = 'dashboard.html';
+        }
+
+        function setStatus(elementId, message, tone) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.textContent = message || '';
+            if (tone === 'error') el.className = 'text-sm text-red-600';
+            else if (tone === 'ok') el.className = 'text-sm text-emerald-600';
+            else el.className = 'text-sm text-gray-500';
+        }
+
+        function showGlobal(message, tone) {
+            const el = document.getElementById('globalAlert');
+            if (!el) return;
+            el.classList.remove('hidden', 'bg-red-50', 'border-red-200', 'text-red-700', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+            el.textContent = message;
+            if (tone === 'error') {
+                el.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+            } else {
+                el.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+            }
+        }
+
+        async function loadUserInfo() {
+            try {
+                const response = await authAPI.getMe();
+                if (response.success) {
+                    document.getElementById('userEmail').textContent = response.user.email;
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 실패:', error);
+            }
+        }
+
+        function fillForm(module) {
+            document.getElementById('moduleSummary').textContent = `${module.name} (${module.module_id})`;
+            document.getElementById('backToModuleBtn').href = `module.html?id=${encodeURIComponent(moduleDbId)}`;
+            document.getElementById('arduinoWifiSsid').value = module.wifi_ssid || '';
+            document.getElementById('arduinoWifiPassword').value = '';
+            document.getElementById('moduleIdInput').value = module.module_id || '';
+            const syncSsid = document.getElementById('syncWifiSsid');
+            if (syncSsid && syncSsid.checked) {
+                document.getElementById('espWifiSsid').value = module.wifi_ssid || '';
+            }
+            document.getElementById('espWifiPassword').value = '';
+            document.getElementById('cameraStreamInput').value = module.camera_stream_url || '';
+        }
+
+        async function loadModule() {
+            try {
+                const response = await modulesAPI.getById(moduleDbId);
+                if (!response.success || !response.module) {
+                    throw new Error('모듈 정보를 불러올 수 없습니다.');
+                }
+                currentModule = response.module;
+                fillForm(currentModule);
+            } catch (error) {
+                console.error('모듈 정보 로드 실패:', error);
+                alert('모듈 정보를 불러오지 못했습니다.');
+                window.location.href = 'dashboard.html';
+            }
+        }
+
+        async function updateModule(data) {
+            const response = await modulesAPI.update(moduleDbId, data);
+            if (!response.success) {
+                throw new Error(response.message || '세팅 저장에 실패했습니다.');
+            }
+            currentModule = response.module;
+            fillForm(currentModule);
+            return response;
+        }
+
+        document.getElementById('arduinoWifiForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            setStatus('arduinoWifiStatus', '저장 중...', 'normal');
+            try {
+                const wifiSsid = document.getElementById('arduinoWifiSsid').value.trim();
+                const wifiPassword = document.getElementById('arduinoWifiPassword').value.trim();
+                const payload = {
+                    wifi_ssid: wifiSsid || null
+                };
+                if (wifiPassword) {
+                    payload.wifi_password = wifiPassword;
+                }
+                await updateModule(payload);
+                setStatus('arduinoWifiStatus', '아두이노 WiFi 세팅이 저장되었습니다.', 'ok');
+                showGlobal('아두이노 WiFi 세팅 저장 완료', 'ok');
+            } catch (error) {
+                const message = error.response?.data?.message || error.message || '아두이노 WiFi 세팅 저장 실패';
+                setStatus('arduinoWifiStatus', message, 'error');
+                showGlobal(message, 'error');
+            }
+        });
+
+        document.getElementById('moduleIdForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            setStatus('moduleIdStatus', '저장 중...', 'normal');
+            try {
+                const nextModuleId = document.getElementById('moduleIdInput').value.trim();
+                if (!nextModuleId) {
+                    throw new Error('모듈 ID를 입력하세요.');
+                }
+                await updateModule({ module_id: nextModuleId });
+                setStatus('moduleIdStatus', '모듈 ID가 변경되었습니다.', 'ok');
+                showGlobal('모듈 ID 세팅 저장 완료', 'ok');
+            } catch (error) {
+                const message = error.response?.data?.message || error.message || '모듈 ID 변경 실패';
+                setStatus('moduleIdStatus', message, 'error');
+                showGlobal(message, 'error');
+            }
+        });
+
+        document.getElementById('espWifiForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            setStatus('espWifiStatus', 'ESP32-CAM 적용 중...', 'normal');
+            try {
+                if (!currentModule?.module_id) {
+                    throw new Error('모듈 정보를 불러온 뒤 다시 시도하세요.');
+                }
+                const ssid = document.getElementById('espWifiSsid').value.trim();
+                const password = document.getElementById('espWifiPassword').value;
+                if (!ssid) {
+                    throw new Error('ESP32-CAM WiFi SSID를 입력하세요.');
+                }
+
+                const result = await apiRequest(`/api/camera/${encodeURIComponent(currentModule.module_id)}/wifi`, {
+                    method: 'POST',
+                    body: JSON.stringify({ ssid, password })
+                });
+                if (!result.success) {
+                    throw new Error(result.message || 'ESP32-CAM WiFi 적용 실패');
+                }
+                setStatus('espWifiStatus', 'ESP32-CAM WiFi 적용 완료 (필요 시 자동 재연결됩니다).', 'ok');
+                showGlobal('ESP32-CAM WiFi 세팅 적용 완료', 'ok');
+            } catch (error) {
+                const message = error.response?.data?.message || error.message || 'ESP32-CAM WiFi 적용 실패';
+                setStatus('espWifiStatus', message, 'error');
+                showGlobal(message, 'error');
+            }
+        });
+
+        document.getElementById('cameraStreamForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            setStatus('cameraStreamStatus', '저장 중...', 'normal');
+            try {
+                const streamUrl = document.getElementById('cameraStreamInput').value.trim();
+                await updateModule({ camera_stream_url: streamUrl ? streamUrl : null });
+                setStatus('cameraStreamStatus', '카메라 스트림 세팅이 저장되었습니다.', 'ok');
+                showGlobal('카메라 스트림 세팅 저장 완료', 'ok');
+            } catch (error) {
+                const message = error.response?.data?.message || error.message || '카메라 스트림 세팅 저장 실패';
+                setStatus('cameraStreamStatus', message, 'error');
+                showGlobal(message, 'error');
+            }
+        });
+
+        // 브라우저에서 실제 연결 SSID를 읽는 것은 보안상 제한되므로,
+        // 아두이노 SSID를 ESP32-CAM SSID에 자동 동기화하는 방식으로 UX를 단순화한다.
+        const arduinoSsidInput = document.getElementById('arduinoWifiSsid');
+        const espSsidInput = document.getElementById('espWifiSsid');
+        const syncWifiSsid = document.getElementById('syncWifiSsid');
+        if (arduinoSsidInput && espSsidInput && syncWifiSsid) {
+            arduinoSsidInput.addEventListener('input', () => {
+                if (syncWifiSsid.checked) {
+                    espSsidInput.value = arduinoSsidInput.value;
+                }
+            });
+            syncWifiSsid.addEventListener('change', () => {
+                if (syncWifiSsid.checked) {
+                    espSsidInput.value = arduinoSsidInput.value;
+                }
+            });
+        }
+
+        loadUserInfo();
+        loadModule();
+    </script>
+</body>
+</html>

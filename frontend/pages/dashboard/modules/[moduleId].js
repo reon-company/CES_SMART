@@ -47,7 +47,7 @@ export default function ModuleDetailPage() {
           }
         }
 
-        return 'https://ces-smart.reonaicoffee.com';
+        return 'https://farm.cessmart.com';
       })();
 
       let token = null;

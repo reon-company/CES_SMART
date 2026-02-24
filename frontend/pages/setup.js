@@ -10,7 +10,7 @@ export default function SetupPage() {
 
   const apiBase = useMemo(() => {
     if (typeof window === 'undefined') {
-      return process.env.NEXT_PUBLIC_API_BASE_URL || 'https://ces-smart.reonaicoffee.com';
+      return process.env.NEXT_PUBLIC_API_BASE_URL || 'https://farm.cessmart.com';
     }
 
     const explicit = (process.env.NEXT_PUBLIC_API_BASE_URL || '').trim();
@@ -20,7 +20,7 @@ export default function SetupPage() {
     if (host === 'localhost' || host === '127.0.0.1') {
       return 'http://localhost:3000';
     }
-    return 'https://ces-smart.reonaicoffee.com';
+    return 'https://farm.cessmart.com';
   }, []);
 
   const installerDownloadUrl = `${apiBase}/downloads/CES_SMART_Installer.exe`;

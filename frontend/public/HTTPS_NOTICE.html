@@ -38,15 +38,15 @@
                     <li>브라우저 주소창의 자물쇠 아이콘 클릭</li>
                     <li>"인증서가 유효하지 않음" 또는 "연결이 비공개로 설정되어 있지 않음" 클릭</li>
                     <li>"고급" 또는 "Advanced" 클릭</li>
-                    <li>"54.180.237.225(으)로 이동" 또는 "Proceed to 54.180.237.225" 클릭</li>
+                    <li>"farm.cessmart.com(으)로 이동" 또는 "Proceed to farm.cessmart.com" 클릭</li>
                 </ol>
             </div>
             
             <div class="bg-white rounded-lg p-4 mt-4 mb-4">
                 <h4 class="font-semibold mb-2">방법 2: 직접 API 주소 접속</h4>
                 <p class="text-sm mb-2">다음 주소로 직접 접속하여 인증서 허용:</p>
-                <a href="https://54.180.237.225/api/health" target="_blank" class="text-blue-500 hover:underline break-all">
-                    https://54.180.237.225/api/health
+                <a href="https://farm.cessmart.com/api/health" target="_blank" class="text-blue-500 hover:underline break-all">
+                    https://farm.cessmart.com/api/health
                 </a>
             </div>
             
@@ -60,7 +60,7 @@ sudo apt install nginx -y
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout /etc/ssl/private/ces-api.key \
   -out /etc/ssl/certs/ces-api.crt \
-  -subj "/C=KR/ST=Seoul/L=Seoul/O=CES/CN=54.180.237.225"
+  -subj "/C=KR/ST=Seoul/L=Seoul/O=CES/CN=farm.cessmart.com"
 
 # 3. Nginx 설정 파일 생성
 sudo nano /etc/nginx/sites-available/ces-api</code></pre>
@@ -71,13 +71,13 @@ sudo nano /etc/nginx/sites-available/ces-api</code></pre>
             <h3 class="font-bold text-blue-800 mb-3">Nginx 설정 내용</h3>
             <pre class="bg-gray-800 text-green-400 p-4 rounded overflow-x-auto text-xs"><code>server {
     listen 80;
-    server_name 54.180.237.225;
+    server_name farm.cessmart.com;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl;
-    server_name 54.180.237.225;
+    server_name farm.cessmart.com;
 
     ssl_certificate /etc/ssl/certs/ces-api.crt;
     ssl_certificate_key /etc/ssl/private/ces-api.key;

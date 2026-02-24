@@ -13,8 +13,8 @@
 // API Configuration
 // Arduino는 HTTPS를 지원하지 않으므로 HTTP 사용
 // 도메인 사용 시: http://CES-smart.reonaicoffee.com (포트 80 또는 3000)
-// IP 직접 사용 시: http://43.201.148.223:3000
-#define API_BASE_URL "http://43.201.148.223:3000"
+// IP 직접 사용 시: http://3.34.142.41:3000
+#define API_BASE_URL "http://3.34.142.41:3000"
 #define API_SENSORS_ENDPOINT "/api/sensors"
 #define API_ACTUATORS_STATUS_ENDPOINT "/api/actuators/status"
 #define API_ACTUATORS_CONTROL_ENDPOINT "/api/actuators/control"

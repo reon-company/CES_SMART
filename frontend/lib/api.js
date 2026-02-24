@@ -17,7 +17,7 @@ const getApiBaseUrl = () => {
     }
   }
 
-  return 'https://ces-smart.reonaicoffee.com';
+  return 'https://farm.cessmart.com';
 };
 
 const api = axios.create({

@@ -70,8 +70,8 @@ const defaultCorsOrigins = [
   'http://127.0.0.1:3001',
   'http://127.0.0.1:5500',
   'https://ces-smart.vercel.app',
-  'https://ces-smart.reonaicoffee.com',
-  'http://43.201.148.223:3000',
+  'https://farm.cessmart.com',
+  'http://3.34.142.41:3000',
 ];
 const corsOrigins = Array.from(new Set(
   process.env.CORS_ORIGIN

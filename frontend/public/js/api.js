@@ -18,7 +18,7 @@ const getApiBaseUrl = () => {
         return 'http://localhost:3000';
     }
 
-    return 'https://ces-smart.reonaicoffee.com';
+    return 'https://farm.cessmart.com';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -88,7 +88,7 @@ async function apiRequest(endpoint, options = {}) {
                     response: {
                         status: 0,
                         data: { 
-                            message: 'SSL 인증서 오류: 브라우저에서 "고급" → "ces-smart.reonaicoffee.com(으)로 이동"을 클릭하여 인증서를 허용해주세요.',
+                            message: 'SSL 인증서 오류: 브라우저에서 "고급" → "farm.cessmart.com(으)로 이동"을 클릭하여 인증서를 허용해주세요.',
                             sslError: true
                         }
                     }

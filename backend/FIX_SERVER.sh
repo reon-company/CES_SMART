@@ -4,7 +4,7 @@
 # 사용법: ./FIX_SERVER.sh [SSH_KEY_PATH] [SERVER_IP]
 
 SSH_KEY=${1:-"LightsailDefaultKey-ap-northeast-2.pem"}
-SERVER_IP=${2:-"43.201.148.223"}
+SERVER_IP=${2:-"3.34.142.41"}
 
 echo "=========================================="
 echo "서버 문제 해결 스크립트"
